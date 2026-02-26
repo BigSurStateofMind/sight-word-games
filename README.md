@@ -1,11 +1,13 @@
 # Sight Word Games
 
-Two interactive games to help children practice sight words.
+Four interactive games to help children practice sight words.
 
 ## Games Included
 
-1. **Sight Word Garden** - Click words to make flowers bloom
-2. **Sight Word Adventure** - Collect accessories by finding correct words
+1. **Sight Word Bloom** - Original garden game with blooming flowers
+2. **Sight Word Garden** - Plant seeds and watch them grow
+3. **Sight Word Adventure** - Collect accessories by finding correct words
+4. **Sight Word Flight** - Fly through the sky collecting words
 
 ## How to Deploy to GitHub Pages
 
@@ -19,8 +21,10 @@ Two interactive games to help children practice sight words.
 ## Files
 
 - `index.html` - Landing page where users choose which game to play
-- `garden.html` - Sight Word Garden game
+- `sightgarden1.html` - Sight Word Bloom (original garden game)
+- `garden.html` - Sight Word Garden (seed planting version)
 - `adventure.html` - Sight Word Adventure game
+- `flight.html` - Sight Word Flight game
 
 ## Sharing
 

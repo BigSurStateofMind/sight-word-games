@@ -1,0 +1,2252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sight Word Garden</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --garden-bg: #87ceeb;
+  --ground: #5a8f3c;
+  --ui-bg: rgba(255,255,255,0.92);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes bloom {
+  0% { transform: scale(0) rotate(0deg); opacity: 0; }
+  50% { transform: scale(1.3) rotate(180deg); opacity: 1; }
+  100% { transform: scale(1) rotate(360deg); opacity: 1; }
+}
+
+@keyframes sparkle {
+  0%, 100% { opacity: 0; transform: scale(0); }
+  50% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes seedPulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.1); filter: brightness(1.2); }
+}
+
+@keyframes explode {
+  0% { transform: scale(1); opacity: 1; filter: brightness(1); }
+  20% { transform: scale(1.4); opacity: 1; filter: brightness(2); }
+  100% { transform: scale(0); opacity: 0; filter: brightness(3); }
+}
+
+@keyframes explosionParticle {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--px), var(--py)) scale(0); opacity: 0; }
+}
+
+@keyframes explosionRing {
+  0% { transform: scale(0); opacity: 0.8; }
+  100% { transform: scale(3); opacity: 0; }
+}
+
+.seed.exploding {
+  animation: explode 0.45s ease-out forwards !important;
+  pointer-events: none;
+}
+
+.explosion-particle {
+  position: absolute;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: var(--color);
+  animation: explosionParticle 0.6s ease-out forwards;
+  pointer-events: none;
+  z-index: 25;
+}
+
+.explosion-ring {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 4px solid var(--color);
+  animation: explosionRing 0.5s ease-out forwards;
+  pointer-events: none;
+  z-index: 24;
+}
+
+.explosion-star {
+  position: absolute;
+  font-size: var(--size);
+  animation: explosionParticle 0.8s ease-out forwards;
+  pointer-events: none;
+  z-index: 25;
+}
+
+@keyframes mastered {
+  0% { transform: scale(1); }
+  25% { transform: scale(1.4); }
+  50% { transform: scale(1.2) rotate(10deg); }
+  75% { transform: scale(1.3) rotate(-10deg); }
+  100% { transform: scale(1); }
+}
+
+@keyframes unlockGlow {
+  0% { box-shadow: 0 0 0 0 rgba(255,215,0,0.7); }
+  70% { box-shadow: 0 0 20px 10px rgba(255,215,0,0); }
+  100% { box-shadow: 0 0 0 0 rgba(255,215,0,0); }
+}
+
+body {
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, sans-serif;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Navigation Bar */
+#nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 70px;
+  background: var(--ui-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  z-index: 100;
+  border-bottom: 3px solid rgba(0,0,0,0.1);
+  gap: 8px;
+}
+
+#nav h1 {
+  font-size: 22px;
+  color: #2d5a1e;
+  white-space: nowrap;
+  margin-right: 8px;
+}
+
+#gardenTabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  flex: 1;
+  padding: 4px 0;
+  scrollbar-width: none;
+}
+
+#gardenTabs::-webkit-scrollbar { display: none; }
+
+.garden-tab {
+  border: none;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: bold;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.3s;
+  position: relative;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.garden-tab.locked {
+  background: #aaa;
+  cursor: not-allowed;
+  opacity: 0.6;
+  color: #666;
+  text-shadow: none;
+}
+
+.garden-tab.active {
+  transform: scale(1.1);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+}
+
+.garden-tab .tab-progress {
+  font-size: 10px;
+  display: block;
+  opacity: 0.9;
+}
+
+#progressArea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+#totalProgress {
+  font-size: 14px;
+  color: #2d5a1e;
+  font-weight: bold;
+}
+
+#progressBar {
+  width: 80px;
+  height: 12px;
+  background: #ddd;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+#progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #4CAF50, #8BC34A);
+  border-radius: 6px;
+  transition: width 0.5s;
+}
+
+/* Garden Area */
+#gardenArea {
+  position: fixed;
+  top: 70px; left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+  transition: background 1s;
+}
+
+/* Ground layer */
+#ground {
+  position: absolute;
+  bottom: 0; left: 0; right: 0;
+  height: 35%;
+  transition: background 1s;
+}
+
+/* Scenery */
+.scenery {
+  position: absolute;
+  pointer-events: none;
+}
+
+/* Seeds / Word orbs */
+.seed {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+  transition: transform 0.2s;
+  animation: float 3s ease-in-out infinite, seedPulse 2s ease-in-out infinite;
+}
+
+.seed:hover {
+  transform: scale(1.3) !important;
+  z-index: 20;
+}
+
+.seed-orb {
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2), inset 0 -3px 6px rgba(0,0,0,0.1), inset 0 3px 6px rgba(255,255,255,0.3);
+  position: relative;
+}
+
+.seed-orb::after {
+  content: '';
+  position: absolute;
+  top: 8px; left: 14px;
+  width: 18px; height: 10px;
+  background: rgba(255,255,255,0.4);
+  border-radius: 50%;
+  transform: rotate(-30deg);
+}
+
+/* Flowers */
+.flower {
+  position: absolute;
+  z-index: 5;
+  animation: bloom 0.8s ease-out forwards;
+  pointer-events: none;
+}
+
+.flower.mastered {
+  animation: bloom 0.8s ease-out forwards, mastered 0.6s ease-in-out 0.8s;
+}
+
+.flower-word {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 12px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+  opacity: 1;
+  transition: opacity 2s ease-out 1.5s;
+  pointer-events: none;
+  z-index: 6;
+}
+
+.flower-word.fade { opacity: 0; }
+
+/* Sparkle effect */
+.sparkle {
+  position: absolute;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: gold;
+  animation: sparkle 0.6s ease-out forwards;
+  pointer-events: none;
+  z-index: 15;
+}
+
+/* Celebration overlay */
+#celebration {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.4);
+  z-index: 200;
+}
+
+#celebration.show { display: flex; }
+
+#celebrationCard {
+  background: white;
+  border-radius: 30px;
+  padding: 40px 50px;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: bloom 0.5s ease-out;
+}
+
+#celebrationCard h2 {
+  font-size: 36px;
+  color: #2d5a1e;
+  margin-bottom: 10px;
+}
+
+#celebrationCard p {
+  font-size: 20px;
+  color: #666;
+  margin-bottom: 20px;
+}
+
+#celebrationCard button {
+  background: linear-gradient(135deg, #4CAF50, #8BC34A);
+  color: white;
+  border: none;
+  padding: 15px 40px;
+  font-size: 20px;
+  font-family: inherit;
+  border-radius: 30px;
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow: 0 4px 15px rgba(76,175,80,0.4);
+  transition: transform 0.2s;
+}
+
+#celebrationCard button:hover { transform: scale(1.05); }
+
+/* Girl character */
+#girlCharacter {
+  position: absolute;
+  bottom: 8%;
+  left: 3%;
+  z-index: 30;
+  pointer-events: none;
+  transition: opacity 0.5s;
+}
+
+@keyframes girlBounce {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  50% { transform: translateY(-6px) rotate(0deg); }
+}
+
+@keyframes girlDance {
+  0% { transform: translateY(0) rotate(0deg); }
+  15% { transform: translateY(-12px) rotate(-8deg); }
+  30% { transform: translateY(0) rotate(6deg); }
+  45% { transform: translateY(-10px) rotate(-6deg); }
+  60% { transform: translateY(0) rotate(8deg); }
+  75% { transform: translateY(-8px) rotate(-4deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+
+@keyframes girlSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  25% { transform: rotate(180deg) scale(1.1); }
+  50% { transform: rotate(360deg) scale(1); }
+  75% { transform: rotate(540deg) scale(1.1); }
+  100% { transform: rotate(720deg) scale(1); }
+}
+
+@keyframes girlJump {
+  0% { transform: translateY(0) scaleY(1); }
+  15% { transform: translateY(0) scaleY(0.8) scaleX(1.15); }
+  30% { transform: translateY(-50px) scaleY(1.1) scaleX(0.95); }
+  50% { transform: translateY(-55px) scaleY(1) scaleX(1); }
+  70% { transform: translateY(0) scaleY(0.85) scaleX(1.1); }
+  85% { transform: translateY(-15px) scaleY(1.05); }
+  100% { transform: translateY(0) scaleY(1) scaleX(1); }
+}
+
+@keyframes girlWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-12deg); }
+  40% { transform: rotate(10deg); }
+  60% { transform: rotate(-8deg); }
+  80% { transform: rotate(6deg); }
+}
+
+@keyframes girlCartwheel {
+  0% { transform: translateX(0) rotate(0deg); }
+  50% { transform: translateX(30px) rotate(360deg) translateY(-20px); }
+  100% { transform: translateX(0) rotate(720deg); }
+}
+
+@keyframes girlGymnasticsFlip {
+  0% { transform: translateY(0) rotate(0deg) scale(1); }
+  8% { transform: translateY(10px) rotate(0deg) scaleY(0.7) scaleX(1.2); }
+  20% { transform: translateY(-80px) rotate(0deg) scale(1.1); }
+  30% { transform: translateY(-120px) rotate(180deg) scale(1.15); }
+  40% { transform: translateY(-100px) rotate(360deg) scale(1.1); }
+  50% { transform: translateY(-110px) rotate(540deg) scale(1.05); }
+  60% { transform: translateY(-60px) rotate(720deg) scale(1); }
+  70% { transform: translateY(-20px) rotate(900deg) scale(1); }
+  80% { transform: translateY(0px) rotate(1080deg) scaleY(0.75) scaleX(1.2); }
+  88% { transform: translateY(-30px) rotate(1080deg) scale(1.05); }
+  94% { transform: translateY(0) rotate(1080deg) scale(1); }
+  100% { transform: translateY(0) rotate(1080deg) scale(1); }
+}
+
+#girlCharacter.react-gymnastics-flip svg { animation: girlGymnasticsFlip 1.8s ease-in-out 1; }
+
+#girlCharacter svg {
+  animation: girlBounce 2.5s ease-in-out infinite;
+}
+
+#girlCharacter.react-dance svg { animation: girlDance 0.9s ease-in-out 1; }
+#girlCharacter.react-spin svg { animation: girlSpin 0.8s ease-in-out 1; }
+#girlCharacter.react-jump svg { animation: girlJump 0.7s ease-out 1; }
+#girlCharacter.react-wiggle svg { animation: girlWiggle 0.6s ease-in-out 1; }
+#girlCharacter.react-cartwheel svg { animation: girlCartwheel 1s ease-in-out 1; }
+
+/* Speech bubble */
+.speech-bubble {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-40%);
+  background: white;
+  border-radius: 18px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-weight: bold;
+  color: #333;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  opacity: 0;
+  transition: opacity 0.3s;
+  pointer-events: none;
+}
+
+.speech-bubble.show { opacity: 1; }
+
+.speech-bubble::after {
+  content: '';
+  position: absolute;
+  bottom: -8px;
+  left: 30px;
+  width: 0; height: 0;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 10px solid white;
+}
+
+/* Music button */
+#musicBtn {
+  background: none;
+  border: 2px solid #2d5a1e;
+  border-radius: 50%;
+  width: 36px; height: 36px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* Reset button */
+#resetBtn {
+  position: fixed;
+  bottom: 12px; right: 12px;
+  background: rgba(0,0,0,0.2);
+  color: rgba(255,255,255,0.6);
+  border: none;
+  padding: 6px 12px;
+  font-size: 11px;
+  font-family: inherit;
+  border-radius: 10px;
+  cursor: pointer;
+  z-index: 50;
+}
+
+#resetBtn:hover { background: rgba(0,0,0,0.4); color: #fff; }
+
+/* Sound toggle */
+#soundBtn {
+  background: none;
+  border: 2px solid #2d5a1e;
+  border-radius: 50%;
+  width: 36px; height: 36px;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+</style>
+</head>
+<body>
+
+<div id="nav">
+  <h1>Sight Word Garden</h1>
+  <div id="gardenTabs"></div>
+  <div id="progressArea">
+    <span id="totalProgress">0/100</span>
+    <div id="progressBar"><div id="progressFill" style="width:0%"></div></div>
+    <button id="musicBtn" title="Toggle Music">🎵</button>
+    <button id="soundBtn" title="Toggle Sound">🔊</button>
+  </div>
+</div>
+
+<div id="gardenArea">
+  <div id="ground"></div>
+  <div id="girlCharacter">
+    <div class="speech-bubble" id="speechBubble"></div>
+  </div>
+</div>
+
+<div id="celebration">
+  <div id="celebrationCard">
+    <h2 id="celebrationTitle"></h2>
+    <p id="celebrationMsg"></p>
+    <button id="celebrationBtn"></button>
+  </div>
+</div>
+
+<button id="resetBtn">Reset Progress</button>
+
+<script>
+// ===== GAME DATA =====
+const GARDENS = [
+  {
+    name: "Backyard", icon: "🏡",
+    words: ["the","and","is","it","in","on","at","to","a","I"],
+    sky: "linear-gradient(180deg, #87CEEB 0%, #E0F0FF 70%, #C8E6C9 100%)",
+    ground: "linear-gradient(180deg, #5a8f3c 0%, #4a7a2e 40%, #3d6625 100%)",
+    seedColor: "#66BB6A",
+    tabColor: "#4CAF50",
+    flowerSVG: (c, m) => backyardSurprise(c, m),
+    scenery: (el) => {
+      addSVG(el, 50, 42, 120, 180, fencePost());
+      addSVG(el, 170, 42, 120, 180, fencePost());
+      addSVG(el, 290, 42, 120, 180, fencePost());
+      addSVG(el, 10, 10, 200, 150, cloudSVG(0.3));
+      addSVG(el, 70, 15, 160, 120, cloudSVG(0.2));
+    }
+  },
+  {
+    name: "Kitchen", icon: "🍳",
+    words: ["my","you","he","she","we","they","me","be","have","do"],
+    sky: "linear-gradient(180deg, #FFF8E1 0%, #FFECB3 70%, #FFE0B2 100%)",
+    ground: "linear-gradient(180deg, #D7CCC8 0%, #BCAAA4 40%, #A1887F 100%)",
+    seedColor: "#FF7043",
+    tabColor: "#FF5722",
+    flowerSVG: (c, m) => cactusSurprise(c, m),
+    scenery: (el) => {
+      addSVG(el, 20, 30, 80, 80, kitchenJar('#FF8A65'));
+      addSVG(el, 80, 10, 200, 150, cloudSVG(0.15));
+    }
+  },
+  {
+    name: "Forest", icon: "🌲",
+    words: ["see","look","go","come","here","there","where","up","down","out"],
+    sky: "linear-gradient(180deg, #558B2F 0%, #7CB342 30%, #9CCC65 60%, #C5E1A5 100%)",
+    ground: "linear-gradient(180deg, #5D4037 0%, #4E342E 40%, #3E2723 100%)",
+    seedColor: "#AB47BC",
+    tabColor: "#7B1FA2",
+    flowerSVG: (c, m) => disneyForestSurprise(c, m),
+    scenery: (el) => {
+      addSVG(el, 5, 8, 140, 220, treeSVG('#2E7D32', '#1B5E20'));
+      addSVG(el, 82, 12, 120, 200, treeSVG('#388E3C', '#2E7D32'));
+      addSVG(el, 60, 5, 200, 180, cloudSVG(0.1));
+    }
+  },
+  {
+    name: "Ocean", icon: "🌊",
+    words: ["said","was","are","were","has","had","can","will","what","when"],
+    sky: "linear-gradient(180deg, #0288D1 0%, #03A9F4 40%, #4FC3F7 70%, #B3E5FC 100%)",
+    ground: "linear-gradient(180deg, #0277BD 0%, #01579B 40%, #004D73 100%)",
+    seedColor: "#26C6DA",
+    tabColor: "#0097A7",
+    flowerSVG: (c, m) => miniGirlSVG(c, m),
+    scenery: (el) => {
+      addSVG(el, 30, 35, 100, 120, seaweed('#00897B'));
+      addSVG(el, 75, 40, 80, 100, seaweed('#00796B'));
+      addSVG(el, 20, 8, 180, 130, cloudSVG(0.2));
+    }
+  },
+  {
+    name: "Mountain", icon: "🏔️",
+    words: ["like","some","her","him","his","this","that","with","for","as"],
+    sky: "linear-gradient(180deg, #3F51B5 0%, #7986CB 40%, #C5CAE9 70%, #E8EAF6 100%)",
+    ground: "linear-gradient(180deg, #78909C 0%, #607D8B 40%, #546E7A 100%)",
+    seedColor: "#5C6BC0",
+    tabColor: "#3F51B5",
+    flowerSVG: (c, m) => cuteBunnySVG(c, m),
+    scenery: (el) => {
+      addSVG(el, 5, 15, 300, 250, mountainSVG('#90A4AE', '#B0BEC5'));
+      addSVG(el, 40, 5, 200, 120, cloudSVG(0.25));
+    }
+  },
+  {
+    name: "Desert", icon: "🏜️",
+    words: ["but","not","all","your","from","or","one","two","by","word"],
+    sky: "linear-gradient(180deg, #FF8F00 0%, #FFB300 40%, #FFD54F 70%, #FFF8E1 100%)",
+    ground: "linear-gradient(180deg, #E6A34A 0%, #D4944A 40%, #C68642 100%)",
+    seedColor: "#FF6F00",
+    tabColor: "#EF6C00",
+    flowerSVG: (c, m) => cactusFlower(c, m),
+    scenery: (el) => {
+      addSVG(el, 15, 25, 80, 160, cactusSVG());
+      addSVG(el, 85, 30, 60, 120, cactusSVG());
+      addSVG(el, 50, 6, 200, 100, cloudSVG(0.15));
+    }
+  },
+  {
+    name: "Meadow", icon: "🌻",
+    words: ["make","them","been","call","who","could","now","find","long","way"],
+    sky: "linear-gradient(180deg, #81D4FA 0%, #B3E5FC 50%, #E1F5FE 100%)",
+    ground: "linear-gradient(180deg, #7CB342 0%, #689F38 40%, #558B2F 100%)",
+    seedColor: "#FDD835",
+    tabColor: "#F9A825",
+    flowerSVG: (c, m) => sunflower(c, m),
+    scenery: (el) => {
+      addSVG(el, 10, 10, 200, 150, cloudSVG(0.3));
+      addSVG(el, 70, 5, 160, 100, cloudSVG(0.2));
+    }
+  },
+  {
+    name: "Sky", icon: "☁️",
+    words: ["many","then","these","so","time","write","would","into","day","get"],
+    sky: "linear-gradient(180deg, #1A237E 0%, #283593 30%, #5C6BC0 60%, #9FA8DA 100%)",
+    ground: "linear-gradient(180deg, #E8EAF6 0%, #C5CAE9 40%, #9FA8DA 100%)",
+    seedColor: "#7E57C2",
+    tabColor: "#5E35B1",
+    flowerSVG: (c, m) => starFlower(c, m),
+    scenery: (el) => {
+      addSVG(el, 15, 10, 200, 150, cloudSVG(0.4));
+      addSVG(el, 55, 20, 250, 130, cloudSVG(0.3));
+      addSVG(el, 30, 35, 180, 100, cloudSVG(0.25));
+    }
+  },
+  {
+    name: "River", icon: "🐟",
+    words: ["made","may","part","over","new","sound","take","only","little","work"],
+    sky: "linear-gradient(180deg, #4DB6AC 0%, #80CBC4 40%, #B2DFDB 70%, #E0F2F1 100%)",
+    ground: "linear-gradient(180deg, #26A69A 0%, #00897B 30%, #00695C 60%, #4E342E 100%)",
+    seedColor: "#009688",
+    tabColor: "#00796B",
+    flowerSVG: (c, m) => lilypad(c, m),
+    scenery: (el) => {
+      addSVG(el, 0, 55, 500, 60, riverWater());
+      addSVG(el, 40, 8, 200, 130, cloudSVG(0.2));
+    }
+  },
+  {
+    name: "Night", icon: "🌙",
+    words: ["know","place","live","think","say","great","help","through","much","before"],
+    sky: "linear-gradient(180deg, #0D1B2A 0%, #1B2838 30%, #2C3E50 60%, #34495E 100%)",
+    ground: "linear-gradient(180deg, #1a331a 0%, #142814 40%, #0d1f0d 100%)",
+    seedColor: "#CE93D8",
+    tabColor: "#7B1FA2",
+    flowerSVG: (c, m) => moonFlower(c, m),
+    scenery: (el) => {
+      addSVG(el, 80, 5, 60, 60, moonSVG());
+      addStars(el);
+    }
+  }
+];
+
+const MASTERY_COUNT = 4;
+const STORAGE_KEY = 'sightWordGarden_v2';
+
+// ===== STATE =====
+let state = loadState();
+let currentGarden = 0;
+let soundEnabled = true;
+
+function defaultState() {
+  const s = { wordClicks: {}, unlockedGardens: GARDENS.length };
+  GARDENS.forEach(g => g.words.forEach(w => s.wordClicks[w] = 0));
+  return s;
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const s = JSON.parse(saved);
+      // Ensure all words exist
+      GARDENS.forEach(g => g.words.forEach(w => {
+        if (s.wordClicks[w] === undefined) s.wordClicks[w] = 0;
+      }));
+      // All gardens always unlocked
+      s.unlockedGardens = GARDENS.length;
+      return s;
+    }
+  } catch(e) {}
+  return defaultState();
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+// ===== SVG HELPERS =====
+function svgWrap(w, h, inner) {
+  return `<svg viewBox="0 0 100 100" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
+}
+
+function cloudSVG(opacity) {
+  return `<svg viewBox="0 0 200 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <g opacity="${opacity}">
+      <ellipse cx="70" cy="60" rx="50" ry="25" fill="white"/>
+      <ellipse cx="100" cy="50" rx="40" ry="30" fill="white"/>
+      <ellipse cx="130" cy="60" rx="45" ry="22" fill="white"/>
+    </g>
+  </svg>`;
+}
+
+function fencePost() {
+  return `<svg viewBox="0 0 40 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <rect x="14" y="10" width="12" height="70" fill="#8D6E63" rx="2"/>
+    <polygon points="10,15 20,2 30,15" fill="#8D6E63"/>
+    <rect x="2" y="30" width="36" height="6" fill="#A1887F" rx="1"/>
+    <rect x="2" y="52" width="36" height="6" fill="#A1887F" rx="1"/>
+  </svg>`;
+}
+
+function kitchenJar(color) {
+  return `<svg viewBox="0 0 60 80" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <rect x="12" y="20" width="36" height="55" rx="5" fill="${color}" opacity="0.5"/>
+    <rect x="18" y="12" width="24" height="12" rx="3" fill="#795548"/>
+    <ellipse cx="30" cy="50" rx="10" ry="8" fill="white" opacity="0.3"/>
+  </svg>`;
+}
+
+function treeSVG(c1, c2) {
+  return `<svg viewBox="0 0 100 160" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <rect x="42" y="100" width="16" height="60" fill="#5D4037"/>
+    <ellipse cx="50" cy="60" rx="40" ry="50" fill="${c1}"/>
+    <ellipse cx="35" cy="45" rx="25" ry="35" fill="${c2}"/>
+    <ellipse cx="60" cy="50" rx="22" ry="30" fill="${c2}" opacity="0.7"/>
+  </svg>`;
+}
+
+function seaweed(color) {
+  return `<svg viewBox="0 0 40 100" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <path d="M20 100 Q10 75 20 60 Q30 45 20 30 Q10 15 18 0" fill="none" stroke="${color}" stroke-width="6" stroke-linecap="round"/>
+    <path d="M25 100 Q35 80 25 65 Q15 50 25 35" fill="none" stroke="${color}" stroke-width="4" stroke-linecap="round" opacity="0.6"/>
+  </svg>`;
+}
+
+function mountainSVG(c1, c2) {
+  return `<svg viewBox="0 0 300 200" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <polygon points="50,200 150,30 250,200" fill="${c1}"/>
+    <polygon points="130,40 150,30 170,50 155,50" fill="white"/>
+    <polygon points="0,200 80,80 180,200" fill="${c2}" opacity="0.7"/>
+  </svg>`;
+}
+
+function cactusSVG() {
+  return `<svg viewBox="0 0 60 130" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <rect x="22" y="20" width="16" height="110" rx="8" fill="#4CAF50"/>
+    <rect x="38" y="40" width="20" height="10" rx="5" fill="#4CAF50"/>
+    <rect x="48" y="30" width="10" height="30" rx="5" fill="#4CAF50"/>
+    <rect x="2" y="55" width="20" height="10" rx="5" fill="#4CAF50"/>
+    <rect x="2" y="40" width="10" height="30" rx="5" fill="#4CAF50"/>
+  </svg>`;
+}
+
+function riverWater() {
+  return `<svg viewBox="0 0 500 40" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <rect width="500" height="40" fill="#4DD0E1" opacity="0.4" rx="5"/>
+    <path d="M0 20 Q50 10 100 20 Q150 30 200 20 Q250 10 300 20 Q350 30 400 20 Q450 10 500 20" fill="none" stroke="white" stroke-width="2" opacity="0.4"/>
+  </svg>`;
+}
+
+function moonSVG() {
+  return `<svg viewBox="0 0 60 60" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <circle cx="30" cy="30" r="25" fill="#FFF9C4"/>
+    <circle cx="40" cy="25" r="20" fill="#0D1B2A"/>
+  </svg>`;
+}
+
+function addStars(el) {
+  for (let i = 0; i < 30; i++) {
+    const star = document.createElement('div');
+    star.className = 'scenery';
+    star.style.left = (Math.random() * 90 + 5) + '%';
+    star.style.top = (Math.random() * 40 + 2) + '%';
+    star.style.width = '3px';
+    star.style.height = '3px';
+    star.style.background = 'white';
+    star.style.borderRadius = '50%';
+    star.style.opacity = Math.random() * 0.7 + 0.3;
+    star.style.animation = `sparkle ${Math.random() * 3 + 2}s ease-in-out infinite`;
+    star.style.animationDelay = (Math.random() * 3) + 's';
+    el.appendChild(star);
+  }
+}
+
+function addSVG(parent, leftPct, topPct, w, h, svg) {
+  const d = document.createElement('div');
+  d.className = 'scenery';
+  d.style.left = leftPct + '%';
+  d.style.top = topPct + '%';
+  d.style.width = w + 'px';
+  d.style.height = h + 'px';
+  d.innerHTML = svg;
+  parent.appendChild(d);
+}
+
+// ===== FLOWER SVG GENERATORS =====
+function backyardSurprise(color, mastered) {
+  const choices = [butterflySVG, macawSVG, rainbowSVG];
+  return choices[Math.floor(Math.random() * choices.length)](color, mastered);
+}
+
+function butterflySVG(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="48" fill="gold" opacity="0.3"/>` : '';
+  const c1 = mastered ? '#FFD700' : '#FF6D00';
+  const c2 = mastered ? '#FFF176' : '#FFAB40';
+  const c3 = mastered ? '#FFE082' : '#FF8F00';
+  return `<svg viewBox="0 0 100 100" width="90" height="90" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <!-- Upper wings -->
+    <ellipse cx="30" cy="34" rx="24" ry="22" fill="${c1}" opacity="0.9"/>
+    <ellipse cx="70" cy="34" rx="24" ry="22" fill="${c1}" opacity="0.9"/>
+    <!-- Wing pattern -->
+    <ellipse cx="28" cy="32" rx="12" ry="10" fill="${c2}" opacity="0.7"/>
+    <ellipse cx="72" cy="32" rx="12" ry="10" fill="${c2}" opacity="0.7"/>
+    <circle cx="28" cy="30" r="5" fill="${c3}" opacity="0.6"/>
+    <circle cx="72" cy="30" r="5" fill="${c3}" opacity="0.6"/>
+    <!-- Lower wings -->
+    <ellipse cx="32" cy="60" rx="18" ry="16" fill="${c2}" opacity="0.85"/>
+    <ellipse cx="68" cy="60" rx="18" ry="16" fill="${c2}" opacity="0.85"/>
+    <ellipse cx="32" cy="60" rx="9" ry="8" fill="${c1}" opacity="0.5"/>
+    <ellipse cx="68" cy="60" rx="9" ry="8" fill="${c1}" opacity="0.5"/>
+    <!-- Body -->
+    <ellipse cx="50" cy="48" rx="4" ry="22" fill="#5D4037"/>
+    <!-- Head -->
+    <circle cx="50" cy="24" r="5" fill="#5D4037"/>
+    <!-- Eyes -->
+    <circle cx="48" cy="23" r="1.5" fill="white"/>
+    <circle cx="52" cy="23" r="1.5" fill="white"/>
+    <!-- Antennae -->
+    <path d="M48 20 Q40 8 35 6" fill="none" stroke="#5D4037" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M52 20 Q60 8 65 6" fill="none" stroke="#5D4037" stroke-width="1.5" stroke-linecap="round"/>
+    <circle cx="35" cy="6" r="2.5" fill="${c1}"/>
+    <circle cx="65" cy="6" r="2.5" fill="${c1}"/>
+    <!-- Wing shimmer -->
+    <ellipse cx="25" cy="28" rx="4" ry="3" fill="white" opacity="0.35"/>
+    <ellipse cx="75" cy="28" rx="4" ry="3" fill="white" opacity="0.35"/>
+  </svg>`;
+}
+
+function macawSVG(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="48" fill="gold" opacity="0.3"/>` : '';
+  return `<svg viewBox="0 0 100 100" width="90" height="90" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <!-- Tail feathers -->
+    <path d="M58 75 Q70 95 80 98" stroke="#1E88E5" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M55 75 Q62 95 68 99" stroke="#E53935" stroke-width="5" fill="none" stroke-linecap="round"/>
+    <path d="M52 75 Q55 95 56 99" stroke="#FDD835" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M60 74 Q75 90 88 95" stroke="#43A047" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <!-- Body -->
+    <ellipse cx="50" cy="55" rx="18" ry="24" fill="#E53935"/>
+    <!-- Belly -->
+    <ellipse cx="48" cy="62" rx="11" ry="14" fill="#1E88E5"/>
+    <!-- Wing -->
+    <path d="M62 42 Q78 50 75 70 Q70 65 62 60 Z" fill="#FDD835"/>
+    <path d="M66 48 Q78 54 76 68" fill="none" stroke="#43A047" stroke-width="3" stroke-linecap="round"/>
+    <path d="M64 52 Q74 56 73 66" fill="none" stroke="#1E88E5" stroke-width="2" stroke-linecap="round"/>
+    <!-- Head -->
+    <circle cx="45" cy="30" r="16" fill="#E53935"/>
+    <!-- White eye patch -->
+    <path d="M36 24 Q42 20 48 24 Q48 32 42 34 Q36 32 36 24 Z" fill="white"/>
+    <!-- Eye -->
+    <circle cx="42" cy="28" r="4" fill="#212121"/>
+    <circle cx="43" cy="27" r="1.5" fill="white"/>
+    <!-- Beak -->
+    <path d="M30 30 Q28 26 32 24 Q36 22 38 26 Q34 30 30 30 Z" fill="#212121"/>
+    <path d="M30 30 Q32 32 35 30" fill="none" stroke="#212121" stroke-width="1"/>
+    <!-- Beak highlight -->
+    <path d="M31 26 Q33 24 35 25" fill="none" stroke="#555" stroke-width="0.8"/>
+    <!-- Feet -->
+    <path d="M42 78 L38 88 M42 78 L42 88 M42 78 L46 88" stroke="#616161" stroke-width="2" stroke-linecap="round"/>
+    <path d="M54 76 L50 86 M54 76 L54 86 M54 76 L58 86" stroke="#616161" stroke-width="2" stroke-linecap="round"/>
+    <!-- Head feathers tuft -->
+    <path d="M48 16 Q52 8 50 4" stroke="#E53935" stroke-width="2.5" fill="none" stroke-linecap="round"/>
+    <path d="M46 17 Q46 9 42 6" stroke="#FDD835" stroke-width="2" fill="none" stroke-linecap="round"/>
+    <path d="M50 16 Q56 10 58 5" stroke="#1E88E5" stroke-width="2" fill="none" stroke-linecap="round"/>
+  </svg>`;
+}
+
+function rainbowSVG(color, mastered) {
+  const glow = mastered ? `<rect x="2" y="2" width="96" height="96" rx="10" fill="gold" opacity="0.25"/>` : '';
+  return `<svg viewBox="0 0 100 100" width="90" height="90" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <!-- Clouds at base -->
+    <ellipse cx="15" cy="78" rx="15" ry="10" fill="white"/>
+    <ellipse cx="25" cy="74" rx="12" ry="10" fill="white"/>
+    <ellipse cx="8" cy="74" rx="10" ry="8" fill="white"/>
+    <ellipse cx="85" cy="78" rx="15" ry="10" fill="white"/>
+    <ellipse cx="75" cy="74" rx="12" ry="10" fill="white"/>
+    <ellipse cx="92" cy="74" rx="10" ry="8" fill="white"/>
+    <!-- Rainbow arcs -->
+    <path d="M10 80 Q10 10 90 80" fill="none" stroke="#E53935" stroke-width="6" stroke-linecap="round"/>
+    <path d="M16 80 Q16 18 84 80" fill="none" stroke="#FF6D00" stroke-width="6" stroke-linecap="round"/>
+    <path d="M22 80 Q22 26 78 80" fill="none" stroke="#FDD835" stroke-width="6" stroke-linecap="round"/>
+    <path d="M28 80 Q28 34 72 80" fill="none" stroke="#43A047" stroke-width="6" stroke-linecap="round"/>
+    <path d="M34 80 Q34 42 66 80" fill="none" stroke="#1E88E5" stroke-width="6" stroke-linecap="round"/>
+    <path d="M40 80 Q40 50 60 80" fill="none" stroke="#7B1FA2" stroke-width="6" stroke-linecap="round"/>
+    <!-- Sparkles -->
+    <circle cx="50" cy="25" r="3" fill="#FDD835" opacity="0.8"/>
+    <circle cx="35" cy="35" r="2" fill="white" opacity="0.7"/>
+    <circle cx="65" cy="35" r="2" fill="white" opacity="0.7"/>
+    <circle cx="50" cy="15" r="2" fill="white" opacity="0.6"/>
+    <!-- Stars around rainbow -->
+    <polygon points="50,4 52,10 58,10 53,14 55,20 50,16 45,20 47,14 42,10 48,10" fill="#FDD835" opacity="0.7"/>
+    <polygon points="20,20 21,23 24,23 22,25 23,28 20,26 17,28 18,25 16,23 19,23" fill="white" opacity="0.6"/>
+    <polygon points="80,20 81,23 84,23 82,25 83,28 80,26 77,28 78,25 76,23 79,23" fill="white" opacity="0.6"/>
+  </svg>`;
+}
+
+function daisy(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="45" fill="gold" opacity="0.3"/>` : '';
+  return `<svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    ${[0,45,90,135,180,225,270,315].map(a =>
+      `<ellipse cx="50" cy="20" rx="10" ry="20" fill="${color}" transform="rotate(${a} 50 50)" opacity="0.9"/>`
+    ).join('')}
+    <circle cx="50" cy="50" r="14" fill="#FDD835"/>
+    <circle cx="50" cy="50" r="8" fill="#F9A825"/>
+  </svg>`;
+}
+
+function herbPot(color, mastered) {
+  const glow = mastered ? `<rect x="5" y="5" width="90" height="90" rx="10" fill="gold" opacity="0.25"/>` : '';
+  return `<svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <rect x="25" y="55" width="50" height="40" rx="5" fill="#8D6E63"/>
+    <rect x="20" y="50" width="60" height="10" rx="3" fill="#A1887F"/>
+    ${[35,50,65].map(x =>
+      `<ellipse cx="${x}" cy="38" rx="12" ry="18" fill="${color}"/>`
+    ).join('')}
+    <line x1="35" y1="55" x2="35" y2="38" stroke="#5D4037" stroke-width="2"/>
+    <line x1="50" y1="55" x2="50" y2="35" stroke="#5D4037" stroke-width="2"/>
+    <line x1="65" y1="55" x2="65" y2="38" stroke="#5D4037" stroke-width="2"/>
+  </svg>`;
+}
+
+function mushroom(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="45" fill="gold" opacity="0.3"/>` : '';
+  return `<svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <rect x="40" y="55" width="20" height="35" rx="4" fill="#EFEBE9"/>
+    <ellipse cx="50" cy="45" rx="38" ry="28" fill="${color}"/>
+    <circle cx="38" cy="38" r="6" fill="white" opacity="0.7"/>
+    <circle cx="55" cy="33" r="4" fill="white" opacity="0.7"/>
+    <circle cx="62" cy="45" r="5" fill="white" opacity="0.7"/>
+  </svg>`;
+}
+
+function coral(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="45" fill="gold" opacity="0.3"/>` : '';
+  return `<svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <path d="M50 90 Q50 60 35 45 Q25 35 30 20" stroke="${color}" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M50 90 Q50 55 55 40 Q60 25 55 15" stroke="${color}" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <path d="M50 90 Q55 65 70 50 Q80 40 75 25" stroke="${color}" stroke-width="8" fill="none" stroke-linecap="round"/>
+    <circle cx="30" cy="18" r="6" fill="${color}" opacity="0.8"/>
+    <circle cx="55" cy="12" r="5" fill="${color}" opacity="0.8"/>
+    <circle cx="75" cy="22" r="6" fill="${color}" opacity="0.8"/>
+  </svg>`;
+}
+
+function edelweiss(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="45" fill="gold" opacity="0.3"/>` : '';
+  return `<svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    ${[0,60,120,180,240,300].map(a =>
+      `<ellipse cx="50" cy="25" rx="8" ry="18" fill="${color}" transform="rotate(${a} 50 50)"/>`
+    ).join('')}
+    <circle cx="50" cy="50" r="10" fill="white"/>
+    <circle cx="50" cy="50" r="5" fill="#E0E0E0"/>
+  </svg>`;
+}
+
+function cactusFlower(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="45" fill="gold" opacity="0.3"/>` : '';
+  return `<svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <rect x="40" y="40" width="20" height="50" rx="10" fill="#4CAF50"/>
+    ${[0,72,144,216,288].map(a =>
+      `<ellipse cx="50" cy="28" rx="9" ry="16" fill="${color}" transform="rotate(${a} 50 38)"/>`
+    ).join('')}
+    <circle cx="50" cy="38" r="7" fill="#FFEB3B"/>
+  </svg>`;
+}
+
+function sunflower(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="48" fill="gold" opacity="0.3"/>` : '';
+  return `<svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <line x1="50" y1="50" x2="50" y2="100" stroke="#558B2F" stroke-width="5"/>
+    ${[0,30,60,90,120,150,180,210,240,270,300,330].map(a =>
+      `<ellipse cx="50" cy="24" rx="8" ry="16" fill="${color}" transform="rotate(${a} 50 50)"/>`
+    ).join('')}
+    <circle cx="50" cy="50" r="14" fill="#5D4037"/>
+    <circle cx="50" cy="50" r="10" fill="#795548"/>
+  </svg>`;
+}
+
+function starFlower(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="45" fill="gold" opacity="0.4"/>` : '';
+  return `<svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <polygon points="50,5 61,35 95,35 68,55 79,90 50,68 21,90 32,55 5,35 39,35" fill="${color}" opacity="0.9"/>
+    <polygon points="50,20 57,40 78,40 62,52 67,73 50,60 33,73 38,52 22,40 43,40" fill="white" opacity="0.5"/>
+    <circle cx="50" cy="48" r="6" fill="white"/>
+  </svg>`;
+}
+
+function lilypad(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="45" fill="gold" opacity="0.3"/>` : '';
+  return `<svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <ellipse cx="50" cy="60" rx="38" ry="20" fill="#4CAF50"/>
+    <path d="M50 60 L50 40" stroke="#4CAF50" stroke-width="0" fill="none"/>
+    ${[0,60,120,180,240].map(a =>
+      `<ellipse cx="50" cy="35" rx="7" ry="14" fill="${color}" transform="rotate(${a} 50 42)"/>`
+    ).join('')}
+    <circle cx="50" cy="42" r="6" fill="#FFC107"/>
+  </svg>`;
+}
+
+function moonFlower(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="45" fill="#E1BEE7" opacity="0.4"/>` : '';
+  return `<svg viewBox="0 0 100 100" width="80" height="80" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    ${[0,51,102,153,204,255,306].map(a =>
+      `<ellipse cx="50" cy="22" rx="10" ry="18" fill="${color}" transform="rotate(${a} 50 50)" opacity="0.85"/>`
+    ).join('')}
+    <circle cx="50" cy="50" r="12" fill="#FFF9C4"/>
+    <circle cx="50" cy="50" r="7" fill="#FFF176"/>
+    <circle cx="46" cy="47" r="2" fill="white" opacity="0.5"/>
+  </svg>`;
+}
+
+// ===== CACTUS SVG GENERATORS (Kitchen board) =====
+function cactusSurprise(color, mastered) {
+  const choices = [tallCactusSVG, roundCactusSVG, pricklyCactusSVG, bloomingCactusSVG];
+  return choices[Math.floor(Math.random() * choices.length)](color, mastered);
+}
+
+function tallCactusSVG(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="48" fill="gold" opacity="0.3"/>` : '';
+  const c = mastered ? '#FFD700' : '#4CAF50';
+  const c2 = mastered ? '#FFF176' : '#66BB6A';
+  return `<svg viewBox="0 0 100 100" width="90" height="90" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <!-- Pot -->
+    <path d="M30 85 L35 98 L65 98 L70 85 Z" fill="#D2691E"/>
+    <rect x="28" y="82" width="44" height="6" rx="2" fill="#A0522D"/>
+    <!-- Main body -->
+    <rect x="42" y="22" width="16" height="62" rx="8" fill="${c}"/>
+    <!-- Right arm -->
+    <rect x="58" y="36" width="18" height="8" rx="4" fill="${c}"/>
+    <rect x="68" y="20" width="8" height="24" rx="4" fill="${c}"/>
+    <!-- Left arm -->
+    <rect x="24" y="46" width="18" height="8" rx="4" fill="${c}"/>
+    <rect x="24" y="32" width="8" height="22" rx="4" fill="${c}"/>
+    <!-- Highlights -->
+    <rect x="47" y="28" width="3" height="50" rx="1.5" fill="${c2}" opacity="0.5"/>
+    <rect x="70" y="24" width="2" height="14" rx="1" fill="${c2}" opacity="0.4"/>
+    <rect x="27" y="36" width="2" height="14" rx="1" fill="${c2}" opacity="0.4"/>
+    <!-- Cute face -->
+    <circle cx="47" cy="42" r="2.5" fill="#333"/>
+    <circle cx="55" cy="42" r="2.5" fill="#333"/>
+    <circle cx="48" cy="41" r="1" fill="white"/>
+    <circle cx="56" cy="41" r="1" fill="white"/>
+    <path d="M46 48 Q50.5 53 55 48" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Blush -->
+    <ellipse cx="42" cy="48" rx="4" ry="2.5" fill="#FF9999" opacity="0.5"/>
+    <ellipse cx="59" cy="48" rx="4" ry="2.5" fill="#FF9999" opacity="0.5"/>
+    <!-- Flower on top -->
+    <circle cx="50" cy="18" r="6" fill="#FF6B9D"/>
+    <circle cx="50" cy="18" r="3" fill="#FFD700"/>
+  </svg>`;
+}
+
+function roundCactusSVG(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="48" fill="gold" opacity="0.3"/>` : '';
+  const c = mastered ? '#FFD700' : '#2E7D32';
+  const c2 = mastered ? '#FFF176' : '#43A047';
+  return `<svg viewBox="0 0 100 100" width="90" height="90" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <!-- Pot -->
+    <path d="M28 88 L33 99 L67 99 L72 88 Z" fill="#C2185B"/>
+    <rect x="26" y="85" width="48" height="6" rx="2" fill="#E91E63"/>
+    <!-- Round body -->
+    <ellipse cx="50" cy="58" rx="24" ry="30" fill="${c}"/>
+    <!-- Ribs (vertical lines) -->
+    <path d="M38 32 Q37 58 38 85" fill="none" stroke="${c2}" stroke-width="1.5" opacity="0.6"/>
+    <path d="M50 28 Q50 58 50 86" fill="none" stroke="${c2}" stroke-width="1.5" opacity="0.6"/>
+    <path d="M62 32 Q63 58 62 85" fill="none" stroke="${c2}" stroke-width="1.5" opacity="0.6"/>
+    <!-- Cute face -->
+    <circle cx="43" cy="52" r="3" fill="#333"/>
+    <circle cx="57" cy="52" r="3" fill="#333"/>
+    <circle cx="44" cy="51" r="1.2" fill="white"/>
+    <circle cx="58" cy="51" r="1.2" fill="white"/>
+    <path d="M44 60 Q50 65 56 60" fill="none" stroke="#333" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Blush -->
+    <ellipse cx="38" cy="58" rx="5" ry="3" fill="#FFAB91" opacity="0.5"/>
+    <ellipse cx="62" cy="58" rx="5" ry="3" fill="#FFAB91" opacity="0.5"/>
+    <!-- Small flowers on top -->
+    <circle cx="42" cy="30" r="4" fill="#FFD54F"/>
+    <circle cx="42" cy="30" r="2" fill="#FF8A65"/>
+    <circle cx="56" cy="32" r="3.5" fill="#FF80AB"/>
+    <circle cx="56" cy="32" r="1.8" fill="#FFD54F"/>
+  </svg>`;
+}
+
+function pricklyCactusSVG(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="48" fill="gold" opacity="0.3"/>` : '';
+  const c = mastered ? '#FFD700' : '#388E3C';
+  const c2 = mastered ? '#FFF176' : '#4CAF50';
+  return `<svg viewBox="0 0 100 100" width="90" height="90" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <!-- Pot -->
+    <path d="M32 86 L36 98 L64 98 L68 86 Z" fill="#5D4037"/>
+    <rect x="30" y="83" width="40" height="6" rx="2" fill="#795548"/>
+    <!-- Prickly pear pads -->
+    <ellipse cx="50" cy="62" rx="18" ry="22" fill="${c}"/>
+    <ellipse cx="34" cy="42" rx="14" ry="18" fill="${c}" transform="rotate(-15 34 42)"/>
+    <ellipse cx="66" cy="40" rx="13" ry="17" fill="${c}" transform="rotate(15 66 40)"/>
+    <ellipse cx="50" cy="24" rx="12" ry="15" fill="${c2}"/>
+    <!-- Speckles -->
+    <circle cx="50" cy="55" r="1.5" fill="${c2}" opacity="0.6"/>
+    <circle cx="44" cy="65" r="1.5" fill="${c2}" opacity="0.6"/>
+    <circle cx="56" cy="68" r="1.5" fill="${c2}" opacity="0.6"/>
+    <circle cx="30" cy="38" r="1.2" fill="${c2}" opacity="0.6"/>
+    <circle cx="38" cy="48" r="1.2" fill="${c2}" opacity="0.6"/>
+    <circle cx="62" cy="36" r="1.2" fill="${c2}" opacity="0.6"/>
+    <circle cx="70" cy="44" r="1.2" fill="${c2}" opacity="0.6"/>
+    <!-- Cute face on top pad -->
+    <circle cx="45" cy="22" r="2" fill="#333"/>
+    <circle cx="55" cy="22" r="2" fill="#333"/>
+    <circle cx="46" cy="21" r="0.8" fill="white"/>
+    <circle cx="56" cy="21" r="0.8" fill="white"/>
+    <path d="M46 27 Q50 30 54 27" fill="none" stroke="#333" stroke-width="1.2" stroke-linecap="round"/>
+    <!-- Blush -->
+    <ellipse cx="41" cy="26" rx="3.5" ry="2" fill="#FFAB91" opacity="0.5"/>
+    <ellipse cx="59" cy="26" rx="3.5" ry="2" fill="#FFAB91" opacity="0.5"/>
+    <!-- Little flower -->
+    <circle cx="50" cy="10" r="5" fill="#FF4081"/>
+    <circle cx="50" cy="10" r="2.5" fill="#FFEB3B"/>
+  </svg>`;
+}
+
+function bloomingCactusSVG(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="48" fill="gold" opacity="0.3"/>` : '';
+  const c = mastered ? '#FFD700' : '#558B2F';
+  const c2 = mastered ? '#FFF176' : '#7CB342';
+  return `<svg viewBox="0 0 100 100" width="90" height="90" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <!-- Pot -->
+    <path d="M30 88 L35 99 L65 99 L70 88 Z" fill="#FF7043"/>
+    <rect x="28" y="85" width="44" height="6" rx="2" fill="#FF8A65"/>
+    <!-- Star/barrel cactus body -->
+    <circle cx="50" cy="58" r="28" fill="${c}"/>
+    <!-- Ribs -->
+    ${[0,45,90,135].map(a =>
+      `<line x1="50" y1="30" x2="50" y2="86" stroke="${c2}" stroke-width="2" opacity="0.5" transform="rotate(${a} 50 58)"/>`
+    ).join('')}
+    <!-- Cute face -->
+    <circle cx="42" cy="54" r="3" fill="#333"/>
+    <circle cx="58" cy="54" r="3" fill="#333"/>
+    <circle cx="43" cy="53" r="1.2" fill="white"/>
+    <circle cx="59" cy="53" r="1.2" fill="white"/>
+    <!-- Happy open mouth -->
+    <ellipse cx="50" cy="64" rx="5" ry="4" fill="#333"/>
+    <ellipse cx="50" cy="63" rx="4" ry="2.5" fill="#FF8A80"/>
+    <!-- Blush -->
+    <ellipse cx="36" cy="60" rx="5" ry="3" fill="#FFAB91" opacity="0.5"/>
+    <ellipse cx="64" cy="60" rx="5" ry="3" fill="#FFAB91" opacity="0.5"/>
+    <!-- Big flowers on top -->
+    ${[0,72,144,216,288].map(a =>
+      `<ellipse cx="50" cy="22" rx="5" ry="9" fill="#FF80AB" transform="rotate(${a} 50 30)"/>`
+    ).join('')}
+    <circle cx="50" cy="30" r="5" fill="#FFD54F"/>
+    <circle cx="50" cy="30" r="2.5" fill="#FF6D00"/>
+    <!-- Small side flower -->
+    <circle cx="74" cy="46" r="4" fill="#CE93D8"/>
+    <circle cx="74" cy="46" r="2" fill="#FFD54F"/>
+  </svg>`;
+}
+
+// ===== DISNEY FOREST SVG GENERATORS (Forest board) =====
+function disneyForestSurprise(color, mastered) {
+  const choices = [dumboSVG, minnieMouseSVG];
+  return choices[Math.floor(Math.random() * choices.length)](color, mastered);
+}
+
+function dumboSVG(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="48" fill="gold" opacity="0.3"/>` : '';
+  const bodyColor = mastered ? '#FFD700' : '#B0BEC5';
+  const earColor = mastered ? '#FFF176' : '#90A4AE';
+  const innerEar = mastered ? '#FFE082' : '#F48FB1';
+  return `<svg viewBox="0 0 100 100" width="90" height="90" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <!-- Big floppy ears -->
+    <ellipse cx="15" cy="50" rx="18" ry="30" fill="${earColor}" transform="rotate(-10 15 50)"/>
+    <ellipse cx="15" cy="50" rx="12" ry="22" fill="${innerEar}" opacity="0.5" transform="rotate(-10 15 50)"/>
+    <ellipse cx="85" cy="50" rx="18" ry="30" fill="${earColor}" transform="rotate(10 85 50)"/>
+    <ellipse cx="85" cy="50" rx="12" ry="22" fill="${innerEar}" opacity="0.5" transform="rotate(10 85 50)"/>
+    <!-- Body -->
+    <ellipse cx="50" cy="65" rx="20" ry="22" fill="${bodyColor}"/>
+    <!-- Head -->
+    <circle cx="50" cy="38" r="20" fill="${bodyColor}"/>
+    <!-- Hat (Dumbo's little hat) -->
+    <ellipse cx="50" cy="20" rx="12" ry="4" fill="#FDD835"/>
+    <path d="M42 20 L46 8 L54 8 L58 20" fill="#FDD835"/>
+    <rect x="44" y="6" width="12" height="4" rx="2" fill="#FF6D00"/>
+    <!-- Feather in hat -->
+    <path d="M53 8 Q60 -2 55 -4 Q52 0 53 8" fill="#E53935"/>
+    <!-- Eyes - big and sparkly -->
+    <ellipse cx="43" cy="36" rx="5" ry="6" fill="white"/>
+    <ellipse cx="57" cy="36" rx="5" ry="6" fill="white"/>
+    <circle cx="44" cy="37" r="3.5" fill="#4FC3F7"/>
+    <circle cx="58" cy="37" r="3.5" fill="#4FC3F7"/>
+    <circle cx="44" cy="37" r="2" fill="#1A237E"/>
+    <circle cx="58" cy="37" r="2" fill="#1A237E"/>
+    <circle cx="45.5" cy="35" r="1.3" fill="white"/>
+    <circle cx="59.5" cy="35" r="1.3" fill="white"/>
+    <!-- Trunk -->
+    <path d="M50 44 Q48 52 44 58 Q42 62 46 64 Q48 62 50 56 Q52 50 50 44" fill="${bodyColor}" stroke="${earColor}" stroke-width="0.5"/>
+    <!-- Trunk tip curl -->
+    <circle cx="46" cy="63" r="2" fill="${innerEar}" opacity="0.6"/>
+    <!-- Cute smile -->
+    <path d="M44 50 Q46 48 48 50" fill="none" stroke="#666" stroke-width="1" stroke-linecap="round"/>
+    <!-- Blush -->
+    <ellipse cx="37" cy="42" rx="4" ry="2.5" fill="#FFAB91" opacity="0.4"/>
+    <ellipse cx="63" cy="42" rx="4" ry="2.5" fill="#FFAB91" opacity="0.4"/>
+    <!-- Feet -->
+    <ellipse cx="40" cy="86" rx="8" ry="4" fill="${bodyColor}"/>
+    <ellipse cx="60" cy="86" rx="8" ry="4" fill="${bodyColor}"/>
+    <!-- Tail -->
+    <path d="M68 72 Q75 68 72 62" fill="none" stroke="${bodyColor}" stroke-width="2" stroke-linecap="round"/>
+    <ellipse cx="72" cy="61" rx="2" ry="1.5" fill="${bodyColor}"/>
+  </svg>`;
+}
+
+function minnieMouseSVG(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="48" fill="gold" opacity="0.3"/>` : '';
+  const bodyColor = mastered ? '#FFD700' : '#1A1A1A';
+  const dressColor = mastered ? '#FFF176' : '#E53935';
+  const bowColor = mastered ? '#FF6D00' : '#E53935';
+  return `<svg viewBox="0 0 100 100" width="90" height="90" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <!-- Ears -->
+    <circle cx="30" cy="18" r="14" fill="${bodyColor}"/>
+    <circle cx="70" cy="18" r="14" fill="${bodyColor}"/>
+    <!-- Head -->
+    <circle cx="50" cy="35" r="20" fill="${bodyColor}"/>
+    <!-- Face oval -->
+    <ellipse cx="50" cy="42" rx="12" ry="10" fill="#FFE0BD"/>
+    <!-- Big bow -->
+    <g transform="translate(50, 14)">
+      <path d="M0 0 Q-20 -14 -12 0 Q-20 14 0 0" fill="${bowColor}"/>
+      <path d="M0 0 Q20 -14 12 0 Q20 14 0 0" fill="${bowColor}"/>
+      <circle cx="0" cy="0" r="4" fill="${bowColor}"/>
+      <!-- Polka dots on bow -->
+      <circle cx="-10" cy="-4" r="2" fill="white"/>
+      <circle cx="-8" cy="4" r="1.5" fill="white"/>
+      <circle cx="10" cy="-4" r="2" fill="white"/>
+      <circle cx="8" cy="4" r="1.5" fill="white"/>
+    </g>
+    <!-- Eyes - big and cute -->
+    <ellipse cx="43" cy="36" rx="5" ry="6.5" fill="white"/>
+    <ellipse cx="57" cy="36" rx="5" ry="6.5" fill="white"/>
+    <circle cx="44" cy="37" r="3.5" fill="#1A1A1A"/>
+    <circle cx="58" cy="37" r="3.5" fill="#1A1A1A"/>
+    <circle cx="45.5" cy="35.5" r="1.5" fill="white"/>
+    <circle cx="59.5" cy="35.5" r="1.5" fill="white"/>
+    <!-- Eyelashes -->
+    <path d="M38 31 Q39 28 41 30" fill="none" stroke="#1A1A1A" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M47 30 Q48 27 49 30" fill="none" stroke="#1A1A1A" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M51 30 Q52 27 53 30" fill="none" stroke="#1A1A1A" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M59 31 Q61 28 62 30" fill="none" stroke="#1A1A1A" stroke-width="1.2" stroke-linecap="round"/>
+    <!-- Nose -->
+    <ellipse cx="50" cy="42" rx="4" ry="3" fill="#1A1A1A"/>
+    <ellipse cx="49" cy="41" rx="1.5" ry="1" fill="white" opacity="0.4"/>
+    <!-- Smile -->
+    <path d="M42 46 Q50 54 58 46" fill="none" stroke="#1A1A1A" stroke-width="1.5" stroke-linecap="round"/>
+    <!-- Blush -->
+    <ellipse cx="37" cy="44" rx="4" ry="2.5" fill="#FF8A80" opacity="0.5"/>
+    <ellipse cx="63" cy="44" rx="4" ry="2.5" fill="#FF8A80" opacity="0.5"/>
+    <!-- Dress -->
+    <path d="M36 55 Q50 52 64 55 L70 80 Q50 84 30 80 Z" fill="${dressColor}"/>
+    <!-- Polka dots on dress -->
+    <circle cx="42" cy="62" r="2.5" fill="white"/>
+    <circle cx="55" cy="65" r="2.5" fill="white"/>
+    <circle cx="48" cy="72" r="2.5" fill="white"/>
+    <circle cx="60" cy="74" r="2" fill="white"/>
+    <circle cx="38" cy="73" r="2" fill="white"/>
+    <!-- Shoes -->
+    <ellipse cx="38" cy="88" rx="9" ry="5" fill="#FDD835"/>
+    <ellipse cx="62" cy="88" rx="9" ry="5" fill="#FDD835"/>
+    <!-- Legs -->
+    <rect x="35" y="80" width="6" height="8" rx="3" fill="${bodyColor}"/>
+    <rect x="59" y="80" width="6" height="8" rx="3" fill="${bodyColor}"/>
+  </svg>`;
+}
+
+// ===== MINI GIRL SVG (Ocean board) =====
+function miniGirlSVG(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="48" fill="gold" opacity="0.3"/>` : '';
+  // Randomly pick a dress color for variety
+  const dresses = ['#F48FB1','#FF8A65','#81C784','#4FC3F7','#B39DDB','#FFB74D','#FFF176','#CE93D8','#80CBC4'];
+  const dress = mastered ? '#FFD700' : dresses[Math.floor(Math.random() * dresses.length)];
+  const skin = '#FFE0BD';
+  const hair = mastered ? '#FFF176' : '#FFD54F';
+  const bow = mastered ? '#FF6D00' : '#FF4081';
+  const shoes = mastered ? '#FFA000' : '#E91E63';
+  return `<svg viewBox="0 0 100 100" width="90" height="90" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <!-- Shadow -->
+    <ellipse cx="50" cy="96" rx="18" ry="3" fill="rgba(0,0,0,0.1)"/>
+    <!-- Legs -->
+    <rect x="42" y="72" width="6" height="18" rx="3" fill="${skin}"/>
+    <rect x="54" y="72" width="6" height="18" rx="3" fill="${skin}"/>
+    <!-- Socks -->
+    <rect x="41" y="82" width="8" height="6" rx="3" fill="white"/>
+    <rect x="53" y="82" width="8" height="6" rx="3" fill="white"/>
+    <!-- Shoes -->
+    <ellipse cx="45" cy="90" rx="7" ry="4" fill="${shoes}"/>
+    <ellipse cx="57" cy="90" rx="7" ry="4" fill="${shoes}"/>
+    <!-- Dress -->
+    <path d="M36 48 Q50 44 64 48 L68 74 Q50 78 32 74 Z" fill="${dress}"/>
+    <!-- Dress ruffle -->
+    <path d="M32 72 Q38 76 44 72 Q50 76 56 72 Q62 76 68 72 Q68 74 68 74 Q50 80 32 74 Z" fill="${dress}" opacity="0.7"/>
+    <!-- Collar -->
+    <path d="M40 48 Q45 44 50 48" fill="white" opacity="0.6"/>
+    <path d="M50 48 Q55 44 60 48" fill="white" opacity="0.6"/>
+    <!-- Arms -->
+    <rect x="28" y="50" width="6" height="18" rx="3" fill="${skin}" transform="rotate(-8 31 50)"/>
+    <rect x="66" y="50" width="6" height="18" rx="3" fill="${skin}" transform="rotate(8 69 50)"/>
+    <!-- Hands -->
+    <circle cx="29" cy="69" r="4" fill="${skin}"/>
+    <circle cx="71" cy="69" r="4" fill="${skin}"/>
+    <!-- Head -->
+    <ellipse cx="50" cy="30" rx="18" ry="20" fill="${skin}"/>
+    <!-- Hair back -->
+    <ellipse cx="50" cy="22" rx="21" ry="18" fill="${hair}"/>
+    <!-- Hair sides -->
+    <path d="M30 24 Q26 42 28 60 Q30 62 32 60 Q32 44 34 28 Z" fill="${hair}"/>
+    <path d="M70 24 Q74 42 72 60 Q70 62 68 60 Q68 44 66 28 Z" fill="${hair}"/>
+    <!-- Bangs -->
+    <path d="M32 24 Q38 10 48 14 Q44 20 40 26 Z" fill="${hair}"/>
+    <path d="M68 24 Q62 10 52 14 Q56 20 60 26 Z" fill="${hair}"/>
+    <!-- Bow -->
+    <g transform="translate(50, 10)">
+      <path d="M0 0 Q-12 -8 -7 0 Q-12 8 0 0" fill="${bow}"/>
+      <path d="M0 0 Q12 -8 7 0 Q12 8 0 0" fill="${bow}"/>
+      <circle cx="0" cy="0" r="2.5" fill="${bow}"/>
+    </g>
+    <!-- Eyes -->
+    <ellipse cx="43" cy="29" rx="4.5" ry="5.5" fill="white"/>
+    <ellipse cx="57" cy="29" rx="4.5" ry="5.5" fill="white"/>
+    <circle cx="44" cy="30" r="3" fill="#4FC3F7"/>
+    <circle cx="58" cy="30" r="3" fill="#4FC3F7"/>
+    <circle cx="44" cy="30" r="1.8" fill="#1A237E"/>
+    <circle cx="58" cy="30" r="1.8" fill="#1A237E"/>
+    <circle cx="45.5" cy="28" r="1.2" fill="white"/>
+    <circle cx="59.5" cy="28" r="1.2" fill="white"/>
+    <!-- Eyelashes -->
+    <path d="M38 25 Q40 22 42 24" fill="none" stroke="#5D4037" stroke-width="0.8" stroke-linecap="round"/>
+    <path d="M55 24 Q56 22 58 25" fill="none" stroke="#5D4037" stroke-width="0.8" stroke-linecap="round"/>
+    <!-- Nose -->
+    <path d="M48 34 Q50 36 52 34" fill="none" stroke="#E8A87C" stroke-width="1" stroke-linecap="round"/>
+    <!-- Smile -->
+    <path d="M42 38 Q50 45 58 38" fill="#FF8A80" stroke="#E57373" stroke-width="0.8" stroke-linecap="round"/>
+    <!-- Blush -->
+    <ellipse cx="37" cy="35" rx="4" ry="2.5" fill="#FFAB91" opacity="0.5"/>
+    <ellipse cx="63" cy="35" rx="4" ry="2.5" fill="#FFAB91" opacity="0.5"/>
+  </svg>`;
+}
+
+// ===== CUTE BUNNY SVG (Mountain board) =====
+function cuteBunnySVG(color, mastered) {
+  const glow = mastered ? `<circle cx="50" cy="50" r="48" fill="gold" opacity="0.3"/>` : '';
+  // Pick a random bunny color
+  const furColors = ['#F5F5F5','#E0C8A8','#D7CCC8','#BCAAA4','#A1887F','#FFCCBC','#F8BBD0','#E1BEE7'];
+  const fur = mastered ? '#FFD700' : furColors[Math.floor(Math.random() * furColors.length)];
+  const innerEar = mastered ? '#FFF176' : '#FFB0C0';
+  const nose = mastered ? '#FF6D00' : '#FFB0C0';
+  return `<svg viewBox="0 0 100 100" width="90" height="90" xmlns="http://www.w3.org/2000/svg">
+    ${glow}
+    <!-- Shadow -->
+    <ellipse cx="50" cy="95" rx="22" ry="4" fill="rgba(0,0,0,0.08)"/>
+    <!-- Back paws -->
+    <ellipse cx="34" cy="88" rx="10" ry="6" fill="${fur}"/>
+    <ellipse cx="66" cy="88" rx="10" ry="6" fill="${fur}"/>
+    <!-- Paw pads -->
+    <ellipse cx="34" cy="90" rx="4" ry="2.5" fill="${innerEar}" opacity="0.5"/>
+    <ellipse cx="66" cy="90" rx="4" ry="2.5" fill="${innerEar}" opacity="0.5"/>
+    <!-- Tail -->
+    <circle cx="72" cy="72" r="7" fill="white"/>
+    <circle cx="73" cy="71" r="3" fill="${fur}" opacity="0.3"/>
+    <!-- Body -->
+    <ellipse cx="50" cy="68" rx="24" ry="22" fill="${fur}"/>
+    <!-- Belly -->
+    <ellipse cx="50" cy="72" rx="15" ry="14" fill="white" opacity="0.6"/>
+    <!-- Front paws -->
+    <ellipse cx="36" cy="80" rx="6" ry="4" fill="${fur}"/>
+    <ellipse cx="64" cy="80" rx="6" ry="4" fill="${fur}"/>
+    <!-- Head -->
+    <circle cx="50" cy="38" r="22" fill="${fur}"/>
+    <!-- Ears -->
+    <ellipse cx="36" cy="12" rx="8" ry="22" fill="${fur}" transform="rotate(-10 36 12)"/>
+    <ellipse cx="36" cy="12" rx="5" ry="16" fill="${innerEar}" opacity="0.5" transform="rotate(-10 36 12)"/>
+    <ellipse cx="64" cy="12" rx="8" ry="22" fill="${fur}" transform="rotate(10 64 12)"/>
+    <ellipse cx="64" cy="12" rx="5" ry="16" fill="${innerEar}" opacity="0.5" transform="rotate(10 64 12)"/>
+    <!-- Cheeks -->
+    <circle cx="35" cy="44" r="8" fill="white" opacity="0.5"/>
+    <circle cx="65" cy="44" r="8" fill="white" opacity="0.5"/>
+    <!-- Eyes -->
+    <ellipse cx="41" cy="36" rx="5" ry="6" fill="white"/>
+    <ellipse cx="59" cy="36" rx="5" ry="6" fill="white"/>
+    <circle cx="42" cy="37" r="3.5" fill="#5D4037"/>
+    <circle cx="60" cy="37" r="3.5" fill="#5D4037"/>
+    <circle cx="43.5" cy="35" r="1.5" fill="white"/>
+    <circle cx="61.5" cy="35" r="1.5" fill="white"/>
+    <circle cx="41" cy="38.5" r="0.8" fill="white"/>
+    <circle cx="59" cy="38.5" r="0.8" fill="white"/>
+    <!-- Nose -->
+    <ellipse cx="50" cy="44" rx="4" ry="3" fill="${nose}"/>
+    <ellipse cx="49" cy="43" rx="1.5" ry="1" fill="white" opacity="0.5"/>
+    <!-- Mouth -->
+    <path d="M50 47 Q46 52 42 49" fill="none" stroke="#999" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M50 47 Q54 52 58 49" fill="none" stroke="#999" stroke-width="1.2" stroke-linecap="round"/>
+    <!-- Whiskers -->
+    <line x1="30" y1="42" x2="16" y2="38" stroke="#CCC" stroke-width="0.8" stroke-linecap="round"/>
+    <line x1="30" y1="45" x2="14" y2="46" stroke="#CCC" stroke-width="0.8" stroke-linecap="round"/>
+    <line x1="30" y1="48" x2="16" y2="52" stroke="#CCC" stroke-width="0.8" stroke-linecap="round"/>
+    <line x1="70" y1="42" x2="84" y2="38" stroke="#CCC" stroke-width="0.8" stroke-linecap="round"/>
+    <line x1="70" y1="45" x2="86" y2="46" stroke="#CCC" stroke-width="0.8" stroke-linecap="round"/>
+    <line x1="70" y1="48" x2="84" y2="52" stroke="#CCC" stroke-width="0.8" stroke-linecap="round"/>
+    <!-- Blush -->
+    <ellipse cx="34" cy="46" rx="5" ry="3" fill="#FFAB91" opacity="0.45"/>
+    <ellipse cx="66" cy="46" rx="5" ry="3" fill="#FFAB91" opacity="0.45"/>
+  </svg>`;
+}
+
+// ===== GIRL CHARACTER =====
+function girlSVG(outfit) {
+  const o = Object.assign({
+    dress: '#E91E63', skin: '#FFE0BD', hairColor: '#FFD54F',
+    bow: '#FF4081', shoes: '#E91E63'
+  }, outfit);
+
+  return `<svg viewBox="0 0 120 180" width="130" height="195" xmlns="http://www.w3.org/2000/svg">
+    <!-- Shadow -->
+    <ellipse cx="60" cy="175" rx="26" ry="5" fill="rgba(0,0,0,0.12)"/>
+
+    <!-- Legs -->
+    <rect x="45" y="130" width="9" height="32" rx="4.5" fill="${o.skin}"/>
+    <rect x="66" y="130" width="9" height="32" rx="4.5" fill="${o.skin}"/>
+
+    <!-- Socks -->
+    <rect x="44" y="148" width="11" height="10" rx="4" fill="white"/>
+    <rect x="65" y="148" width="11" height="10" rx="4" fill="white"/>
+
+    <!-- Shoes - mary janes -->
+    <ellipse cx="50" cy="163" rx="11" ry="6" fill="${o.shoes}"/>
+    <ellipse cx="70" cy="163" rx="11" ry="6" fill="${o.shoes}"/>
+    <path d="M44 160 Q50 155 56 160" fill="none" stroke="${o.shoes}" stroke-width="2"/>
+    <path d="M64 160 Q70 155 76 160" fill="none" stroke="${o.shoes}" stroke-width="2"/>
+
+    <!-- Dress body -->
+    <path d="M40 84 Q60 78 80 84 L86 135 Q60 142 34 135 Z" fill="${o.dress}"/>
+
+    <!-- Dress details - cute collar -->
+    <path d="M46 84 Q53 78 60 84" fill="white" opacity="0.6"/>
+    <path d="M60 84 Q67 78 74 84" fill="white" opacity="0.6"/>
+
+    <!-- Dress skirt ruffle -->
+    <path d="M34 132 Q42 138 50 132 Q58 138 66 132 Q74 138 82 132 Q86 135 86 135 Q60 145 34 135 Z" fill="${o.dress}" opacity="0.7"/>
+
+    <!-- Pocket with flower -->
+    <rect x="64" y="105" width="12" height="11" rx="3" fill="white" opacity="0.5"/>
+    <circle cx="70" cy="108" r="3" fill="#FFD54F"/>
+    <circle cx="70" cy="108" r="1.5" fill="#FF8A65"/>
+
+    <!-- Arms -->
+    <rect x="28" y="87" width="9" height="30" rx="4.5" fill="${o.skin}" transform="rotate(-8 32 87)"/>
+    <rect x="83" y="87" width="9" height="30" rx="4.5" fill="${o.skin}" transform="rotate(8 87 87)"/>
+
+    <!-- Hands -->
+    <circle cx="30" cy="119" r="5.5" fill="${o.skin}"/>
+    <circle cx="90" cy="119" r="5.5" fill="${o.skin}"/>
+
+    <!-- Wand/flower in hand -->
+    <line x1="90" y1="114" x2="98" y2="95" stroke="#8D6E63" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="99" cy="92" r="5" fill="#FF80AB"/>
+    <circle cx="99" cy="92" r="2.5" fill="#FFD54F"/>
+
+    <!-- Neck -->
+    <rect x="54" y="70" width="12" height="14" rx="6" fill="${o.skin}"/>
+
+    <!-- Head - rounder and bigger for cute -->
+    <ellipse cx="60" cy="48" rx="28" ry="30" fill="${o.skin}"/>
+
+    <!-- Hair back - long flowing blonde -->
+    <ellipse cx="60" cy="38" rx="32" ry="28" fill="${o.hairColor}"/>
+
+    <!-- Long hair sides flowing down -->
+    <path d="M30 42 Q24 70 28 105 Q30 110 34 105 Q33 75 36 50 Z" fill="${o.hairColor}"/>
+    <path d="M90 42 Q96 70 92 105 Q90 110 86 105 Q87 75 84 50 Z" fill="${o.hairColor}"/>
+
+    <!-- Hair shine -->
+    <path d="M42 22 Q50 18 58 22 Q55 20 48 20 Z" fill="white" opacity="0.35"/>
+    <path d="M50 20 Q60 16 70 22 Q65 19 55 19 Z" fill="white" opacity="0.25"/>
+
+    <!-- Bangs - wispy -->
+    <path d="M32 42 Q38 16 52 20 Q48 28 42 35 Z" fill="${o.hairColor}"/>
+    <path d="M88 42 Q82 16 68 20 Q72 28 78 35 Z" fill="${o.hairColor}"/>
+    <path d="M42 35 Q52 14 62 22 Q56 26 50 32 Z" fill="${o.hairColor}"/>
+
+    <!-- Bow - big and cute on top -->
+    <g transform="translate(60, 18)">
+      <path d="M0 0 Q-18 -12 -10 0 Q-18 12 0 0" fill="${o.bow}"/>
+      <path d="M0 0 Q18 -12 10 0 Q18 12 0 0" fill="${o.bow}"/>
+      <circle cx="0" cy="0" r="3.5" fill="${o.bow}"/>
+      <!-- Bow shine -->
+      <circle cx="-8" cy="-4" r="1.5" fill="white" opacity="0.4"/>
+      <circle cx="8" cy="-4" r="1.5" fill="white" opacity="0.4"/>
+    </g>
+
+    <!-- Eyes - big sparkly anime style -->
+    <ellipse cx="47" cy="48" rx="7" ry="8" fill="white"/>
+    <ellipse cx="73" cy="48" rx="7" ry="8" fill="white"/>
+    <!-- Iris -->
+    <ellipse cx="48" cy="49" rx="5" ry="6" fill="#4FC3F7"/>
+    <ellipse cx="74" cy="49" rx="5" ry="6" fill="#4FC3F7"/>
+    <!-- Pupil -->
+    <circle cx="49" cy="50" r="3" fill="#1A237E"/>
+    <circle cx="75" cy="50" r="3" fill="#1A237E"/>
+    <!-- Eye sparkle - big -->
+    <circle cx="51" cy="46" r="2.2" fill="white"/>
+    <circle cx="77" cy="46" r="2.2" fill="white"/>
+    <!-- Eye sparkle - small -->
+    <circle cx="46" cy="52" r="1.2" fill="white"/>
+    <circle cx="72" cy="52" r="1.2" fill="white"/>
+
+    <!-- Eyelashes -->
+    <path d="M40 42 Q42 38 44 41" fill="none" stroke="#5D4037" stroke-width="1" stroke-linecap="round"/>
+    <path d="M50 40 Q52 37 53 41" fill="none" stroke="#5D4037" stroke-width="1" stroke-linecap="round"/>
+    <path d="M67 41 Q68 37 70 40" fill="none" stroke="#5D4037" stroke-width="1" stroke-linecap="round"/>
+    <path d="M76 42 Q78 38 80 41" fill="none" stroke="#5D4037" stroke-width="1" stroke-linecap="round"/>
+
+    <!-- Eyebrows - expressive -->
+    <path d="M42 38 Q47 35 52 38" fill="none" stroke="#C68A2E" stroke-width="1.3" stroke-linecap="round"/>
+    <path d="M68 38 Q73 35 78 38" fill="none" stroke="#C68A2E" stroke-width="1.3" stroke-linecap="round"/>
+
+    <!-- Cute little nose -->
+    <path d="M58 55 Q60 58 62 55" fill="none" stroke="#E8A87C" stroke-width="1.2" stroke-linecap="round"/>
+
+    <!-- Big happy smile -->
+    <path d="M48 62 Q60 72 72 62" fill="#FF8A80" stroke="#E57373" stroke-width="1" stroke-linecap="round"/>
+    <!-- Tongue peek -->
+    <ellipse cx="60" cy="66" rx="4" ry="3" fill="#EF9A9A"/>
+
+    <!-- Blush - rosy cheeks -->
+    <ellipse cx="39" cy="58" rx="6" ry="4" fill="#FFAB91" opacity="0.5"/>
+    <ellipse cx="81" cy="58" rx="6" ry="4" fill="#FFAB91" opacity="0.5"/>
+
+    <!-- Freckles -->
+    <circle cx="42" cy="56" r="0.8" fill="#DEB887" opacity="0.5"/>
+    <circle cx="45" cy="58" r="0.8" fill="#DEB887" opacity="0.5"/>
+    <circle cx="75" cy="56" r="0.8" fill="#DEB887" opacity="0.5"/>
+    <circle cx="78" cy="58" r="0.8" fill="#DEB887" opacity="0.5"/>
+  </svg>`;
+}
+
+// Outfit for each garden - blonde hair always
+const GIRL_OUTFITS = [
+  { dress: '#F48FB1', bow: '#FF4081', shoes: '#EC407A', hairColor: '#FFD54F' },  // Backyard - pink
+  { dress: '#FF8A65', bow: '#FF5252', shoes: '#FF5722', hairColor: '#FFD54F' },  // Kitchen - coral
+  { dress: '#81C784', bow: '#66BB6A', shoes: '#43A047', hairColor: '#FFD54F' },  // Forest - green
+  { dress: '#4FC3F7', bow: '#29B6F6', shoes: '#039BE5', hairColor: '#FFD54F' },  // Ocean - sky blue
+  { dress: '#B39DDB', bow: '#9575CD', shoes: '#7E57C2', hairColor: '#FFD54F' },  // Mountain - lavender
+  { dress: '#FFB74D', bow: '#FF9800', shoes: '#F57C00', hairColor: '#FFD54F' },  // Desert - amber
+  { dress: '#FFF176', bow: '#FF80AB', shoes: '#FDD835', hairColor: '#FFD54F' },  // Meadow - sunshine
+  { dress: '#CE93D8', bow: '#BA68C8', shoes: '#AB47BC', hairColor: '#FFD54F' },  // Sky - violet
+  { dress: '#80CBC4', bow: '#4DB6AC', shoes: '#00897B', hairColor: '#FFD54F' },  // River - teal
+  { dress: '#7986CB', bow: '#5C6BC0', shoes: '#3F51B5', hairColor: '#FFD54F' },  // Night - periwinkle
+];
+
+const ENCOURAGEMENTS = [
+  "You got it! 🌟", "Great job! ⭐", "Keep going! 💪", "Awesome! 🎉",
+  "You're a star! ✨", "Super reader! 📚", "Wow! 🌈", "Amazing! 💖",
+  "Way to go! 🌺", "So smart! 🧠", "Hehe! 🎸", "Fantastic! 🦋",
+  "Beautiful! 🌸", "Yippee! 💫", "Yes yes yes! 🙌", "Woo hoo! 🎯",
+  "Ooh fancy word! 🎀", "That's my fave! 💕", "Tee hee! 🤭",
+  "You're SO good! 🧁", "Wowzers! 🦄", "Sparkle power! ✨"
+];
+
+const MASTERY_MESSAGES = [
+  "YAAAY! You got it! 🏆", "Word champion! 👑", "Look at that flower!! 🌻",
+  "Super duper star! 🌟", "GOLD! So pretty! 🥇", "Dancing time!! 💃",
+  "I'm SO proud! 🥹", "You're amazing! 🎆"
+];
+
+const REACTIONS = ['dance', 'spin', 'jump', 'wiggle', 'cartwheel'];
+const MASTERY_REACTIONS = ['spin', 'cartwheel', 'jump'];
+
+let speechTimeout = null;
+let reactionTimeout = null;
+
+// Giggle / laugh sounds using Web Audio
+function playGiggle() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+
+    // Cute ascending notes = giggle sound
+    const giggles = [
+      [800, 0, 0.08], [1000, 0.07, 0.08], [1200, 0.14, 0.08],
+      [900, 0.22, 0.06], [1100, 0.27, 0.06], [1300, 0.32, 0.1]
+    ];
+
+    giggles.forEach(([freq, start, dur]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + start);
+      gain.gain.linearRampToValueAtTime(0.12, now + start + 0.01);
+      gain.gain.linearRampToValueAtTime(0, now + start + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.01);
+    });
+
+    setTimeout(() => ctx.close(), 600);
+  } catch(e) {}
+}
+
+function playLaugh() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+
+    // Bigger, happier laugh for mastery
+    const notes = [
+      [700, 0, 0.1], [900, 0.08, 0.08], [1100, 0.15, 0.08],
+      [800, 0.24, 0.06], [1000, 0.29, 0.06], [1200, 0.34, 0.08],
+      [900, 0.43, 0.06], [1100, 0.48, 0.06], [1400, 0.53, 0.15]
+    ];
+
+    notes.forEach(([freq, start, dur]) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + start);
+      gain.gain.linearRampToValueAtTime(0.15, now + start + 0.01);
+      gain.gain.linearRampToValueAtTime(0, now + start + dur);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + start);
+      osc.stop(now + start + dur + 0.01);
+    });
+
+    // Add a sparkly overlay
+    [2200, 2600, 3000, 3400].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0, now + 0.1 + i * 0.08);
+      gain.gain.linearRampToValueAtTime(0.04, now + 0.12 + i * 0.08);
+      gain.gain.linearRampToValueAtTime(0, now + 0.25 + i * 0.08);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now + 0.1 + i * 0.08);
+      osc.stop(now + 0.3 + i * 0.08);
+    });
+
+    setTimeout(() => ctx.close(), 1000);
+  } catch(e) {}
+}
+
+function showEncouragement(mastered) {
+  const bubble = document.getElementById('speechBubble');
+  const msgs = mastered ? MASTERY_MESSAGES : ENCOURAGEMENTS;
+  bubble.textContent = msgs[Math.floor(Math.random() * msgs.length)];
+  bubble.classList.add('show');
+  clearTimeout(speechTimeout);
+  speechTimeout = setTimeout(() => bubble.classList.remove('show'), 2500);
+
+  // Trigger reaction animation
+  const container = document.getElementById('girlCharacter');
+  const pool = mastered ? MASTERY_REACTIONS : REACTIONS;
+  const reaction = pool[Math.floor(Math.random() * pool.length)];
+
+  // Clear any existing reaction
+  clearTimeout(reactionTimeout);
+  container.className = '';
+  // Force reflow
+  void container.offsetWidth;
+  container.classList.add('react-' + reaction);
+
+  reactionTimeout = setTimeout(() => {
+    container.className = '';
+  }, 1200);
+
+  // Play sound
+  if (mastered) {
+    playLaugh();
+  } else {
+    // Giggle ~40% of the time for variety
+    if (Math.random() < 0.4) playGiggle();
+  }
+}
+
+function renderGirlCharacter() {
+  const container = document.getElementById('girlCharacter');
+  const outfit = GIRL_OUTFITS[currentGarden] || GIRL_OUTFITS[0];
+  // Keep bubble, replace SVG
+  const bubble = document.getElementById('speechBubble');
+  container.innerHTML = '';
+  container.appendChild(bubble);
+  container.insertAdjacentHTML('afterbegin', girlSVG(outfit));
+
+  // Wave on garden enter
+  container.classList.add('wave');
+  setTimeout(() => container.classList.remove('wave'), 2000);
+}
+
+// ===== BACKGROUND MUSIC =====
+let musicEnabled = false;
+let audioCtx = null;
+let musicGain = null;
+let musicInterval = null;
+
+function initMusic() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  musicGain = audioCtx.createGain();
+  musicGain.gain.value = 0.08; // Very gentle
+  musicGain.connect(audioCtx.destination);
+}
+
+function playNote(freq, startTime, duration, type) {
+  if (!audioCtx || !musicEnabled) return;
+  const osc = audioCtx.createOscillator();
+  const env = audioCtx.createGain();
+  osc.type = type || 'sine';
+  osc.frequency.value = freq;
+  env.gain.setValueAtTime(0, startTime);
+  env.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
+  env.gain.linearRampToValueAtTime(0.15, startTime + duration * 0.5);
+  env.gain.linearRampToValueAtTime(0, startTime + duration);
+  osc.connect(env);
+  env.connect(musicGain);
+  osc.start(startTime);
+  osc.stop(startTime + duration);
+}
+
+function playMusicLoop() {
+  if (!audioCtx || !musicEnabled) return;
+
+  // Gentle pentatonic melody - sounds like a music box
+  const notes = [
+    523.25, 587.33, 659.25, 783.99, 880.00, // C5, D5, E5, G5, A5
+    783.99, 659.25, 587.33, 523.25, 440.00,  // G5, E5, D5, C5, A4
+    523.25, 659.25, 783.99, 880.00, 783.99,   // C5, E5, G5, A5, G5
+    659.25, 523.25, 440.00, 392.00, 440.00    // E5, C5, A4, G4, A4
+  ];
+
+  const now = audioCtx.currentTime;
+  const noteLen = 0.45;
+
+  notes.forEach((freq, i) => {
+    playNote(freq, now + i * noteLen, noteLen * 0.8, 'sine');
+    // Soft harmony
+    if (i % 2 === 0) {
+      playNote(freq * 0.5, now + i * noteLen, noteLen * 0.6, 'triangle');
+    }
+  });
+
+  // Schedule next loop
+  musicInterval = setTimeout(playMusicLoop, notes.length * noteLen * 1000 + 800);
+}
+
+function startMusic() {
+  initMusic();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  musicEnabled = true;
+  playMusicLoop();
+}
+
+function stopMusic() {
+  musicEnabled = false;
+  clearTimeout(musicInterval);
+}
+
+// ===== SPEECH =====
+function speakWord(word) {
+  if (!soundEnabled) return;
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(word);
+    u.rate = 0.7;
+    u.pitch = 1.25;
+    u.volume = 1;
+    // American female voice
+    const voices = speechSynthesis.getVoices();
+    const preferred =
+         voices.find(v => v.name === 'Samantha' && v.lang === 'en-US')
+      || voices.find(v => v.name.includes('Samantha'))
+      || voices.find(v => v.lang === 'en-US' && /female|woman/i.test(v.name))
+      || voices.find(v => v.lang === 'en-US' && !/Alex|Daniel|Fred|Tom|Aaron|Ralph/i.test(v.name))
+      || voices.find(v => v.lang === 'en-US');
+    if (preferred) u.voice = preferred;
+    speechSynthesis.speak(u);
+  } catch(e) {}
+}
+
+// Preload voices
+if (speechSynthesis.onvoiceschanged !== undefined) {
+  speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+}
+speechSynthesis.getVoices();
+
+// ===== RENDERING =====
+function renderTabs() {
+  const container = document.getElementById('gardenTabs');
+  container.innerHTML = '';
+
+  GARDENS.forEach((g, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'garden-tab' + (i >= state.unlockedGardens ? ' locked' : '') + (i === currentGarden ? ' active' : '');
+    btn.style.background = i < state.unlockedGardens ? g.tabColor : '';
+
+    const masteredCount = g.words.filter(w => state.wordClicks[w] >= MASTERY_COUNT).length;
+    btn.innerHTML = `${g.icon} ${g.name}<span class="tab-progress">${masteredCount}/10</span>`;
+
+    if (i < state.unlockedGardens) {
+      btn.onclick = () => { currentGarden = i; renderGarden(); renderTabs(); };
+    }
+
+    container.appendChild(btn);
+  });
+}
+
+function renderGarden() {
+  const g = GARDENS[currentGarden];
+  const area = document.getElementById('gardenArea');
+  const ground = document.getElementById('ground');
+
+  // Clear previous seeds/flowers/scenery (keep ground)
+  area.querySelectorAll('.seed, .flower, .flower-word, .scenery, .sparkle').forEach(e => e.remove());
+
+  // Set theme
+  area.style.background = g.sky;
+  ground.style.background = g.ground;
+
+  // Add scenery
+  if (g.scenery) g.scenery(area);
+
+  // Render girl character
+  renderGirlCharacter();
+
+  // Place seeds
+  const positions = generatePositions(g.words.length);
+  g.words.forEach((word, i) => {
+    const clicks = state.wordClicks[word];
+    const isMastered = clicks >= MASTERY_COUNT;
+
+    // If mastered, show flower instead of seed
+    if (isMastered) {
+      createFlower(positions[i].x, positions[i].y, word, g, true);
+      return;
+    }
+
+    // Show seed if flower was planted previously (has some clicks), show a small flower
+    if (clicks > 0) {
+      createFlower(positions[i].x, positions[i].y, word, g, false, true);
+    }
+
+    const seed = document.createElement('div');
+    seed.className = 'seed';
+    seed.style.left = positions[i].x + '%';
+    seed.style.top = positions[i].y + '%';
+    seed.style.animationDelay = (Math.random() * 2) + 's';
+
+    const orb = document.createElement('div');
+    orb.className = 'seed-orb';
+    orb.style.background = `radial-gradient(circle at 35% 35%, ${lighten(g.seedColor, 40)}, ${g.seedColor})`;
+    orb.textContent = word;
+
+    // Click count indicator
+    if (clicks > 0) {
+      const dots = document.createElement('div');
+      dots.style.cssText = 'position:absolute;bottom:-8px;display:flex;gap:3px;';
+      for (let d = 0; d < clicks; d++) {
+        const dot = document.createElement('div');
+        dot.style.cssText = `width:6px;height:6px;border-radius:50%;background:#FDD835;`;
+        dots.appendChild(dot);
+      }
+      orb.appendChild(dots);
+    }
+
+    seed.appendChild(orb);
+    seed.onclick = () => handleWordClick(word, seed, positions[i], g);
+    area.appendChild(seed);
+  });
+
+  updateProgress();
+}
+
+function generatePositions(count) {
+  const positions = [];
+  const cols = 5;
+  const rows = Math.ceil(count / cols);
+
+  for (let i = 0; i < count; i++) {
+    const col = i % cols;
+    const row = Math.floor(i / cols);
+
+    const xBase = (col / cols) * 80 + 10;
+    const yBase = (row / rows) * 50 + 25;
+
+    positions.push({
+      x: xBase + (Math.random() * 8 - 4),
+      y: yBase + (Math.random() * 8 - 4)
+    });
+  }
+  return positions;
+}
+
+function handleWordClick(word, seedEl, pos, garden) {
+  // Speak the word
+  speakWord(word);
+
+  // Increment clicks
+  state.wordClicks[word]++;
+  saveState();
+
+  const isMastered = state.wordClicks[word] >= MASTERY_COUNT;
+
+  // Show encouragement from girl character
+  showEncouragement(isMastered);
+
+  // EXPLODE the seed!
+  createExplosion(seedEl, garden.seedColor);
+  seedEl.classList.add('exploding');
+  seedEl.style.pointerEvents = 'none';
+
+  setTimeout(() => seedEl.remove(), 500);
+
+  // Create flower where the seed was
+  setTimeout(() => {
+    createFlower(pos.x, pos.y, word, garden, isMastered);
+    renderTabs();
+
+    // Check if all seeds (balloons) have been popped on this board
+    setTimeout(() => {
+      const remainingSeeds = document.getElementById('gardenArea').querySelectorAll('.seed:not(.exploding)');
+      if (remainingSeeds.length === 0) {
+        // All balloons popped! Celebration + advance
+        setTimeout(() => handleGardenComplete(), 600);
+      }
+    }, 100);
+  }, 450);
+}
+
+function createExplosion(el, color) {
+  const rect = el.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  // Explosion ring
+  const ring = document.createElement('div');
+  ring.className = 'explosion-ring';
+  ring.style.cssText = `left:${cx-30}px;top:${cy-30}px;--color:${color};position:fixed;`;
+  document.body.appendChild(ring);
+  setTimeout(() => ring.remove(), 600);
+
+  // Second ring slightly delayed
+  setTimeout(() => {
+    const ring2 = document.createElement('div');
+    ring2.className = 'explosion-ring';
+    ring2.style.cssText = `left:${cx-30}px;top:${cy-30}px;--color:gold;position:fixed;`;
+    document.body.appendChild(ring2);
+    setTimeout(() => ring2.remove(), 600);
+  }, 100);
+
+  // Colored particles flying outward
+  const particleColors = [color, '#FFD700', '#FF4081', '#FF6D00', '#FDD835', '#E040FB', '#00E5FF', 'white'];
+  for (let i = 0; i < 18; i++) {
+    const p = document.createElement('div');
+    p.className = 'explosion-particle';
+    const angle = (i / 18) * Math.PI * 2 + (Math.random() * 0.4 - 0.2);
+    const dist = 60 + Math.random() * 80;
+    const px = Math.cos(angle) * dist;
+    const py = Math.sin(angle) * dist;
+    const sz = 6 + Math.random() * 10;
+    const c = particleColors[Math.floor(Math.random() * particleColors.length)];
+    p.style.cssText = `left:${cx-sz/2}px;top:${cy-sz/2}px;--px:${px}px;--py:${py}px;--size:${sz}px;--color:${c};position:fixed;animation-delay:${Math.random()*0.1}s;`;
+    document.body.appendChild(p);
+    setTimeout(() => p.remove(), 800);
+  }
+
+  // Fun emoji that fly out
+  const emojis = ['⭐','✨','💥','🌟','💫','🎉','🔥','💖','🌸','🦋'];
+  for (let i = 0; i < 6; i++) {
+    const star = document.createElement('div');
+    star.className = 'explosion-star';
+    const angle = (i / 6) * Math.PI * 2 + Math.random() * 0.5;
+    const dist = 70 + Math.random() * 60;
+    const px = Math.cos(angle) * dist;
+    const py = Math.sin(angle) * dist - 20;
+    const sz = 18 + Math.random() * 16;
+    star.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+    star.style.cssText = `left:${cx-10}px;top:${cy-10}px;--px:${px}px;--py:${py}px;--size:${sz}px;position:fixed;animation-delay:${Math.random()*0.15}s;`;
+    document.body.appendChild(star);
+    setTimeout(() => star.remove(), 1000);
+  }
+
+  // Play explosion pop sound
+  playPopSound();
+}
+
+function playPopSound() {
+  if (!soundEnabled) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+
+    // Pop/burst sound
+    const noise = ctx.createBufferSource();
+    const buf = ctx.createBuffer(1, ctx.sampleRate * 0.15, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < data.length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / data.length, 3);
+    }
+    noise.buffer = buf;
+
+    const noiseGain = ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.15, now);
+    noiseGain.gain.linearRampToValueAtTime(0, now + 0.15);
+    noise.connect(noiseGain);
+    noiseGain.connect(ctx.destination);
+    noise.start(now);
+
+    // Bright ascending tone
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(400, now);
+    osc.frequency.linearRampToValueAtTime(1200, now + 0.12);
+    oscGain.gain.setValueAtTime(0.12, now);
+    oscGain.gain.linearRampToValueAtTime(0, now + 0.15);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.2);
+
+    setTimeout(() => ctx.close(), 300);
+  } catch(e) {}
+}
+
+function createFlower(x, y, word, garden, mastered, small) {
+  const area = document.getElementById('gardenArea');
+  const color = mastered ? '#FFD700' : garden.seedColor;
+  const flowerHTML = garden.flowerSVG(color, mastered);
+
+  const flower = document.createElement('div');
+  flower.className = 'flower' + (mastered ? ' mastered' : '');
+  flower.style.left = (x - 3) + '%';
+  flower.style.top = (y - 3) + '%';
+  if (small) {
+    flower.style.transform = 'scale(0.5)';
+    flower.style.opacity = '0.5';
+    flower.style.animation = 'none';
+  }
+  flower.innerHTML = flowerHTML;
+  area.appendChild(flower);
+
+  // Word label that fades
+  if (!small) {
+    const label = document.createElement('div');
+    label.className = 'flower-word';
+    label.style.left = x + '%';
+    label.style.top = y + '%';
+    label.textContent = word;
+    area.appendChild(label);
+    setTimeout(() => label.classList.add('fade'), 100);
+  }
+}
+
+function createSparkles(el) {
+  // Kept for compatibility but explosion is used instead
+}
+
+let gardenCompleteInProgress = false;
+
+function handleGardenComplete() {
+  // Prevent double-firing
+  if (gardenCompleteInProgress) return;
+  gardenCompleteInProgress = true;
+
+  // Girl does a gymnastics flip!
+  const girlContainer = document.getElementById('girlCharacter');
+  clearTimeout(reactionTimeout);
+  girlContainer.className = '';
+  void girlContainer.offsetWidth;
+  girlContainer.classList.add('react-gymnastics-flip');
+  reactionTimeout = setTimeout(() => { girlContainer.className = ''; }, 2000);
+
+  // Show excitement speech
+  const bubble = document.getElementById('speechBubble');
+  bubble.textContent = '🤸‍♀️ WOOOOO! 🤸‍♀️';
+  bubble.classList.add('show');
+  clearTimeout(speechTimeout);
+  speechTimeout = setTimeout(() => bubble.classList.remove('show'), 3000);
+
+  // Play a big celebration laugh
+  playLaugh();
+
+  const nextGarden = currentGarden + 1;
+  const allComplete = nextGarden >= GARDENS.length;
+
+  if (allComplete) {
+    // Only show the celebration modal for completing ALL gardens
+    const cel = document.getElementById('celebration');
+    const title = document.getElementById('celebrationTitle');
+    const msg = document.getElementById('celebrationMsg');
+    const btn = document.getElementById('celebrationBtn');
+
+    title.textContent = '🎉 You Did It! 🎉';
+    msg.textContent = 'You mastered ALL 100 sight words! You are a Super Reader!';
+    btn.textContent = '🌟 Hooray! 🌟';
+    btn.onclick = () => { cel.classList.remove('show'); gardenCompleteInProgress = false; };
+    setTimeout(() => cel.classList.add('show'), 2000);
+  } else {
+    // Auto-advance to the next board after the flip animation
+    setTimeout(() => {
+      gardenCompleteInProgress = false;
+      currentGarden = nextGarden;
+      renderGarden();
+      renderTabs();
+
+      // Quick welcome message on the new board
+      const bubble2 = document.getElementById('speechBubble');
+      const nextName = GARDENS[currentGarden].name;
+      bubble2.textContent = `✨ ${nextName} time! Let's go! ✨`;
+      bubble2.classList.add('show');
+      clearTimeout(speechTimeout);
+      speechTimeout = setTimeout(() => bubble2.classList.remove('show'), 2500);
+    }, 2200);
+  }
+}
+
+function updateProgress() {
+  const total = Object.values(state.wordClicks).filter(c => c >= MASTERY_COUNT).length;
+  document.getElementById('totalProgress').textContent = `${total}/100`;
+  document.getElementById('progressFill').style.width = total + '%';
+}
+
+function lighten(hex, amount) {
+  hex = hex.replace('#', '');
+  const r = Math.min(255, parseInt(hex.substring(0,2), 16) + amount);
+  const g = Math.min(255, parseInt(hex.substring(2,4), 16) + amount);
+  const b = Math.min(255, parseInt(hex.substring(4,6), 16) + amount);
+  return `rgb(${r},${g},${b})`;
+}
+
+// ===== INIT =====
+document.getElementById('soundBtn').onclick = function() {
+  soundEnabled = !soundEnabled;
+  this.textContent = soundEnabled ? '🔊' : '🔇';
+};
+
+document.getElementById('musicBtn').onclick = function() {
+  if (musicEnabled) {
+    stopMusic();
+    this.textContent = '🎵';
+    this.style.opacity = '0.5';
+  } else {
+    startMusic();
+    this.textContent = '🎶';
+    this.style.opacity = '1';
+  }
+};
+
+document.getElementById('resetBtn').onclick = function() {
+  if (confirm('Reset all progress? This will start the game over.')) {
+    state = defaultState();
+    saveState();
+    currentGarden = 0;
+    renderTabs();
+    renderGarden();
+  }
+};
+
+// Find the latest unlocked garden that isn't complete
+for (let i = state.unlockedGardens - 1; i >= 0; i--) {
+  const g = GARDENS[i];
+  const allMastered = g.words.every(w => state.wordClicks[w] >= MASTERY_COUNT);
+  if (!allMastered) { currentGarden = i; break; }
+}
+
+renderTabs();
+renderGarden();
+</script>
+</body>
+</html>
