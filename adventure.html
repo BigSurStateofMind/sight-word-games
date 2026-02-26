@@ -1,0 +1,1748 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sight Word Adventure</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, sans-serif;
+  overflow: hidden;
+  height: 100vh; width: 100vw;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ===== TOP BAR ===== */
+#topBar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 64px;
+  background: rgba(255,255,255,0.93);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 14px; z-index: 100;
+  border-bottom: 3px solid rgba(0,0,0,0.1);
+}
+
+#coinDisplay {
+  display: flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, #FFF176, #FFD600, #FFB300);
+  padding: 10px 22px; border-radius: 26px;
+  font-size: 28px; font-weight: 900; color: #E65100;
+  box-shadow: 0 4px 16px rgba(255,179,0,0.45), 0 0 20px rgba(255,215,0,0.3);
+  white-space: nowrap;
+  min-width: 130px;
+  border: 3px solid #FFD600;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  letter-spacing: 1px;
+}
+
+#targetArea {
+  display: flex; align-items: center; gap: 10px;
+}
+
+#targetWord {
+  display: none;
+}
+
+#targetLabel {
+  display: none;
+}
+
+#hearAgainBtn {
+  background: linear-gradient(135deg, #CE93D8, #AB47BC);
+  border: 3px solid #8E24AA;
+  border-radius: 50%; width: 52px; height: 52px;
+  font-size: 26px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+  box-shadow: 0 3px 12px rgba(156,39,176,0.35);
+  color: #fff;
+}
+#hearAgainBtn:hover { transform: scale(1.15); }
+#hearAgainBtn:active { transform: scale(0.95); }
+
+#scoreDisplay {
+  font-size: 15px; color: #555; font-weight: bold; white-space: nowrap;
+}
+
+/* ===== GAME AREA ===== */
+#gameArea {
+  position: fixed; top: 64px; left: 0; right: 0; bottom: 0;
+  background: linear-gradient(180deg,
+    #87CEEB 0%, #B3E5FC 40%, #E8F5E9 62%,
+    #81C784 63%, #4CAF50 80%, #388E3C 100%
+  );
+  overflow: hidden;
+}
+
+/* ===== CLOUDS ===== */
+.bg-cloud {
+  position: absolute;
+  background: radial-gradient(ellipse, white 0%, rgba(255,255,255,0.2) 100%);
+  border-radius: 50%; pointer-events: none; z-index: 1;
+  animation: cloudDrift linear infinite;
+}
+@keyframes cloudDrift {
+  from { transform: translateX(-260px); }
+  to { transform: translateX(calc(100vw + 260px)); }
+}
+
+/* ===== CHARACTER ===== */
+#characterContainer {
+  position: absolute; left: 3%; bottom: 6%;
+  width: 180px; z-index: 20; pointer-events: none;
+  animation: charIdle 3s ease-in-out infinite;
+}
+#characterContainer svg { width: 100%; height: auto; }
+
+@keyframes charIdle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+@keyframes celebrateBounce {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-28px) rotate(-4deg); }
+  50% { transform: translateY(-5px); }
+  75% { transform: translateY(-18px) rotate(4deg); }
+}
+@keyframes celebrateWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  20% { transform: rotate(-10deg); }
+  40% { transform: rotate(8deg); }
+  60% { transform: rotate(-6deg); }
+  80% { transform: rotate(4deg); }
+}
+@keyframes celebrateSpin {
+  0% { transform: rotate(0deg) scale(1); }
+  50% { transform: rotate(360deg) scale(1.1); }
+  100% { transform: rotate(720deg) scale(1); }
+}
+#characterContainer.celebrate-bounce { animation: celebrateBounce 0.7s ease-out; }
+#characterContainer.celebrate-wiggle { animation: celebrateWiggle 0.6s ease-in-out; }
+#characterContainer.celebrate-spin  { animation: celebrateSpin 0.9s ease-in-out; }
+
+@keyframes charFall {
+  0% { transform: translateY(0) rotate(0deg); }
+  20% { transform: translateY(0) rotate(15deg); }
+  40% { transform: translateY(20px) rotate(25deg); }
+  50% { transform: translateY(25px) rotate(30deg); }
+  75% { transform: translateY(25px) rotate(30deg); }
+  90% { transform: translateY(-5px) rotate(-3deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+#characterContainer.character-fall {
+  animation: charFall 1s ease-in-out !important;
+}
+
+.blink-overlay {
+  opacity: 0;
+  animation: blinkAnim 4s ease-in-out infinite;
+}
+@keyframes blinkAnim {
+  0%, 92%, 100% { opacity: 0; }
+  95%, 97% { opacity: 1; }
+}
+
+/* ===== WORD BUBBLES ===== */
+.word-bubble {
+  position: absolute; left: 0; top: 0;
+  font-size: 34px; font-weight: bold;
+  padding: 14px 30px; border-radius: 30px;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.35);
+  box-shadow: 0 5px 18px rgba(0,0,0,0.22), inset 0 2px 4px rgba(255,255,255,0.25);
+  cursor: pointer; z-index: 10;
+  will-change: transform;
+  transition: filter 0.12s, box-shadow 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.word-bubble:hover { filter: brightness(1.12); }
+
+/* Correct flash */
+.word-bubble.correct-flash {
+  box-shadow: 0 0 28px 10px rgba(76,175,80,0.7), 0 5px 18px rgba(0,0,0,0.2);
+  filter: brightness(1.35);
+}
+
+/* Dissolve */
+@keyframes bubbleDissolve {
+  0% { opacity: 1; filter: brightness(1); }
+  25% { opacity: 1; filter: brightness(1.5); }
+  100% { opacity: 0; filter: brightness(2) blur(8px); }
+}
+.word-bubble.dissolving {
+  animation: bubbleDissolve 0.5s ease-out forwards !important;
+  pointer-events: none;
+}
+
+/* Shake on wrong */
+@keyframes shakeWord {
+  0%, 100% { margin-left: 0; }
+  15% { margin-left: -14px; }
+  30% { margin-left: 14px; }
+  45% { margin-left: -10px; }
+  60% { margin-left: 8px; }
+  75% { margin-left: -5px; }
+  90% { margin-left: 4px; }
+}
+.word-bubble.shake {
+  animation: shakeWord 0.5s ease-in-out;
+}
+
+/* Fade out distractors */
+.word-bubble.fade-out {
+  transition: opacity 0.4s;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ===== SPARKLES ===== */
+.click-sparkle {
+  position: fixed;
+  width: var(--size); height: var(--size);
+  border-radius: 50%;
+  background: var(--color);
+  pointer-events: none; z-index: 150;
+  animation: sparkleFly 0.6s ease-out forwards;
+}
+@keyframes sparkleFly {
+  0% { transform: translate(0,0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+
+/* ===== FLYING COIN ===== */
+.flying-coin {
+  position: fixed; font-size: 44px;
+  z-index: 200; pointer-events: none;
+  transition: transform 0.75s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.75s ease;
+  filter: drop-shadow(0 0 8px rgba(255,215,0,0.6));
+}
+@keyframes coinPulse {
+  0% { transform: scale(1); box-shadow: 0 4px 16px rgba(255,179,0,0.45), 0 0 20px rgba(255,215,0,0.3); }
+  50% { transform: scale(1.25); box-shadow: 0 4px 24px rgba(255,179,0,0.7), 0 0 35px rgba(255,215,0,0.5); }
+  100% { transform: scale(1); box-shadow: 0 4px 16px rgba(255,179,0,0.45), 0 0 20px rgba(255,215,0,0.3); }
+}
+#coinDisplay.pulse { animation: coinPulse 0.4s ease-out; }
+
+/* ===== SHOP ===== */
+#shopOverlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: none; align-items: center; justify-content: center; z-index: 300;
+}
+#shopOverlay.show { display: flex; }
+
+#shopCard {
+  background: white; border-radius: 30px;
+  padding: 28px 36px; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: shopEnter 0.5s ease-out;
+  max-width: 420px; width: 92%;
+}
+@keyframes shopEnter {
+  0% { transform: scale(0.5) translateY(40px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+#shopCard h2 { font-size: 24px; color: #E91E63; margin-bottom: 8px; }
+#shopAccIcon { font-size: 56px; margin: 8px 0; }
+#shopAccName { font-size: 20px; color: #333; font-weight: bold; margin-bottom: 4px; }
+#shopPreview { margin: 8px auto; display: flex; justify-content: center; }
+#shopEquipBtn {
+  background: linear-gradient(135deg, #E91E63, #FF5722);
+  color: white; border: none; padding: 13px 36px;
+  font-size: 20px; font-family: inherit;
+  border-radius: 30px; cursor: pointer; font-weight: bold;
+  box-shadow: 0 4px 15px rgba(233,30,99,0.4);
+  transition: transform 0.2s; margin-top: 10px;
+}
+#shopEquipBtn:hover { transform: scale(1.06); }
+
+/* ===== ALL DONE OVERLAY ===== */
+#allDoneOverlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: none; align-items: center; justify-content: center; z-index: 300;
+}
+#allDoneOverlay.show { display: flex; }
+#allDoneCard {
+  background: white; border-radius: 30px;
+  padding: 28px 36px; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: shopEnter 0.5s ease-out;
+}
+#allDoneCard h2 { font-size: 26px; color: #E91E63; margin-bottom: 10px; }
+#allDoneCard p  { font-size: 16px; color: #555; margin-bottom: 14px; }
+#allDoneCard button {
+  background: linear-gradient(135deg, #4CAF50, #8BC34A);
+  color: white; border: none; padding: 12px 28px;
+  font-size: 18px; font-family: inherit; border-radius: 30px;
+  cursor: pointer; font-weight: bold;
+}
+
+/* ===== PASSPORT ===== */
+#passportDisplay {
+  font-size: 13px; color: #555; font-weight: bold; white-space: nowrap;
+  background: rgba(255,255,255,0.7); padding: 4px 10px; border-radius: 12px;
+  border: 2px solid rgba(0,0,0,0.08);
+}
+
+/* ===== CELEBRATION ===== */
+#celebrationLayer {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none; z-index: 2; overflow: hidden;
+}
+#celebConfettiContainer {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  overflow: hidden; pointer-events: none;
+}
+.confetti-piece {
+  position: absolute; top: -20px;
+  pointer-events: none;
+  animation: confettiFall var(--fall-dur, 3.5s) linear forwards;
+  opacity: 0.9;
+}
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 1; }
+  25% { transform: translateY(28vh) rotate(180deg) translateX(var(--drift, 30px)); opacity: 1; }
+  50% { transform: translateY(55vh) rotate(360deg) translateX(calc(var(--drift, 30px) * -0.5)); opacity: 0.9; }
+  75% { transform: translateY(82vh) rotate(540deg) translateX(var(--drift, 30px)); opacity: 0.7; }
+  100% { transform: translateY(110vh) rotate(720deg) translateX(0); opacity: 0; }
+}
+#celebScoreBurst {
+  position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%) scale(0);
+  font-size: 64px; font-weight: 900; color: #FFD700;
+  text-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,165,0,0.5), 0 4px 8px rgba(0,0,0,0.3);
+  font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+  white-space: nowrap; z-index: 5;
+  opacity: 0;
+}
+#celebScoreBurst.active {
+  animation: scoreBurst 3s ease-out forwards;
+}
+@keyframes scoreBurst {
+  0% { transform: translate(-50%, -50%) scale(0) rotate(-10deg); opacity: 0; }
+  15% { transform: translate(-50%, -50%) scale(1.3) rotate(3deg); opacity: 1; }
+  25% { transform: translate(-50%, -50%) scale(1.0) rotate(0deg); opacity: 1; }
+  50% { transform: translate(-50%, -50%) scale(1.05) rotate(0deg); opacity: 1; }
+  80% { transform: translate(-50%, -50%) scale(1.0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.8) rotate(0deg); opacity: 0; }
+}
+#celebEmoji {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 20px; z-index: 5;
+  opacity: 0;
+}
+#celebEmoji.active {
+  animation: emojiFlyIn 2.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes emojiFlyIn {
+  0% { transform: translate(-50%, 200px) scale(0.2); opacity: 0; font-size: 20px; }
+  40% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; font-size: 140px; }
+  60% { transform: translate(-50%, -50%) scale(0.95); opacity: 1; font-size: 140px; }
+  75% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; font-size: 150px; }
+  100% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; font-size: 150px; }
+}
+#celebMessage {
+  position: absolute; top: 68%; left: 50%; transform: translate(-50%, -50%) scale(0.5);
+  font-size: 32px; font-weight: 900; color: white;
+  text-shadow: 0 0 15px rgba(255,255,255,0.6), 0 3px 6px rgba(0,0,0,0.4);
+  font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+  white-space: nowrap; z-index: 5;
+  opacity: 0;
+}
+#celebMessage.active {
+  animation: messageReveal 1.5s ease-out forwards;
+}
+@keyframes messageReveal {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+}
+.celeb-sparkle {
+  position: absolute; border-radius: 50%;
+  pointer-events: none; z-index: 6;
+  animation: sparkleRadial 1.2s ease-out forwards;
+}
+@keyframes sparkleRadial {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--sx), var(--sy)) scale(0); opacity: 0; }
+}
+@keyframes celebDestSpin {
+  0% { transform: translateY(0) rotate(0deg) scale(1); }
+  15% { transform: translateY(-20px) rotate(180deg) scale(1.15); }
+  30% { transform: translateY(-10px) rotate(360deg) scale(1.1); }
+  50% { transform: translateY(-25px) rotate(540deg) scale(1.2); }
+  65% { transform: translateY(-10px) rotate(650deg) scale(1.1); }
+  80% { transform: translateY(-5px) rotate(710deg) scale(1.05); }
+  100% { transform: translateY(0) rotate(720deg) scale(1); }
+}
+#characterContainer.celebrate-destination {
+  animation: celebDestSpin 3s ease-in-out !important;
+}
+#celebrationLayer.fade-out {
+  transition: opacity 1s ease-out;
+  opacity: 0;
+}
+
+/* ===== TRAVEL OVERLAY ===== */
+#travelOverlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.6);
+  display: none; align-items: center; justify-content: center; z-index: 300;
+}
+#travelOverlay.show { display: flex; }
+#travelCard {
+  background: white; border-radius: 30px;
+  padding: 32px 40px; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: shopEnter 0.5s ease-out;
+  max-width: 420px; width: 92%;
+}
+#travelEmoji { font-size: 80px; margin-bottom: 8px; }
+#travelCard h2 { font-size: 22px; color: #1565C0; margin-bottom: 8px; }
+#travelCard p { font-size: 28px; color: #333; font-weight: bold; margin-bottom: 16px; }
+#travelGoBtn {
+  background: linear-gradient(135deg, #42A5F5, #1E88E5);
+  color: white; border: none; padding: 14px 40px;
+  font-size: 22px; font-family: inherit;
+  border-radius: 30px; cursor: pointer; font-weight: bold;
+  box-shadow: 0 4px 15px rgba(30,136,229,0.4);
+  transition: transform 0.2s;
+}
+#travelGoBtn:hover { transform: scale(1.06); }
+
+/* ===== RESET ===== */
+#resetBtn {
+  position: fixed; bottom: 10px; right: 10px;
+  background: rgba(0,0,0,0.2); color: rgba(255,255,255,0.6);
+  border: none; padding: 5px 10px; font-size: 11px;
+  font-family: inherit; border-radius: 8px; cursor: pointer; z-index: 50;
+}
+#resetBtn:hover { background: rgba(0,0,0,0.4); color: #fff; }
+
+@media (max-width: 768px) {
+  #characterContainer { width: 130px; left: 1%; bottom: 4%; }
+  .word-bubble { font-size: 26px; padding: 10px 22px; }
+  #coinDisplay { font-size: 22px; padding: 8px 16px; min-width: 105px; }
+  #hearAgainBtn { width: 44px; height: 44px; font-size: 22px; }
+  #topBar { height: 58px; }
+  #gameArea { top: 58px; }
+  #passportDisplay { font-size: 11px; padding: 3px 7px; }
+}
+</style>
+</head>
+<body>
+
+<div id="topBar">
+  <div id="coinDisplay">&#x1fa99; <span id="coinCount">0</span> / 5</div>
+  <div id="targetArea">
+    <span id="targetWord"></span>
+    <button id="hearAgainBtn" title="Hear again">&#x1F50A;</button>
+  </div>
+  <div id="passportDisplay">&#x1F3E0; Home</div>
+  <div id="scoreDisplay">&#11088; <span id="scoreCount">0</span></div>
+</div>
+
+<div id="gameArea">
+  <div id="characterContainer"></div>
+</div>
+
+<div id="shopOverlay">
+  <div id="shopCard">
+    <h2 id="shopTitle">New Accessory!</h2>
+    <div id="shopAccIcon"></div>
+    <p id="shopAccName"></p>
+    <div id="shopPreview"></div>
+    <button id="shopEquipBtn">Wear it!</button>
+  </div>
+</div>
+
+<div id="allDoneOverlay">
+  <div id="allDoneCard">
+    <h2>All Accessories Collected!</h2>
+    <p>You're a Sight Word Superstar! Keep reading!</p>
+    <button id="allDoneCloseBtn">Keep Playing!</button>
+  </div>
+</div>
+
+<div id="travelOverlay">
+  <div id="celebrationLayer">
+    <div id="celebConfettiContainer"></div>
+    <div id="celebScoreBurst"></div>
+    <div id="celebEmoji"></div>
+    <div id="celebMessage"></div>
+  </div>
+  <div id="travelCard">
+    <div id="travelEmoji"></div>
+    <h2 id="travelMessage"></h2>
+    <p id="travelDestName"></p>
+    <button id="travelGoBtn">Let's Go!</button>
+  </div>
+</div>
+
+<button id="resetBtn">Reset</button>
+
+<script>
+// ============================================================
+//  DATA
+// ============================================================
+const WORDS = [
+  'the','of','and','a','to','in','is','you','that','it',
+  'he','was','for','on','are','as','with','his','they','I',
+  'at','be','this','have','from','or','one','had','by','words',
+  'but','not','what','all','were','we','when','your','can','said',
+  'there','use','an','each','which','she','do','how','their','if',
+  'will','up','other','about','out','many','then','them','these','so',
+  'some','her','would','make','like','him','into','time','has','look',
+  'two','more','write','go','see','number','no','way','could','people',
+  'my','than','first','water','been','called','who','am','its','now',
+  'find','long','down','day','did','get','come','made','may','part'
+];
+
+const PRIORITY_WORDS = [
+  'or','other','about','out','then','them','these','so','her','would',
+  'time','more','write','number','no','way','could','people','than','first',
+  'water','called','who','now','find','long','come','made','part'
+];
+
+const ACCESSORIES = [
+  { name: 'Swimming Goggles', icon: '\u{1F97D}', behind: false },
+  { name: 'Feathered Hat',    icon: '\u{1F3A9}', behind: false },
+  { name: 'Pink Ball Gown',   icon: '\u{1F457}', behind: false },
+  { name: 'Glass Slippers',   icon: '\u{1F460}', behind: false },
+  { name: 'Ballet Tutu',      icon: '\u{1FA70}', behind: false },
+  { name: 'Sparkly Crown',    icon: '\u{1F451}', behind: false },
+  { name: 'Butterfly Wings',  icon: '\u{1F98B}', behind: true  },
+  { name: 'Star Wand',        icon: '\u2B50',    behind: false },
+  { name: 'Flower Crown',     icon: '\u{1F490}', behind: false },
+  { name: 'Rainbow Cape',     icon: '\u{1F308}', behind: true  },
+  { name: 'Pearl Necklace',   icon: '\u{1F4FF}', behind: false },
+  { name: 'Magic Boots',      icon: '\u{1F97E}', behind: false },
+];
+
+const DESTINATIONS = [
+  {
+    name: 'Home',
+    milestone: 0,
+    background: 'linear-gradient(180deg, #87CEEB 0%, #B3E5FC 40%, #E8F5E9 62%, #81C784 63%, #4CAF50 80%, #388E3C 100%)',
+    souvenir: null,
+    emoji: '\u{1F3E0}',
+    message: ''
+  },
+  {
+    name: 'Paris',
+    milestone: 50,
+    background: 'linear-gradient(180deg, #E8D5F5 0%, #F3E5F5 30%, #FCE4EC 50%, #FFF9C4 70%, #C8E6C9 85%, #81C784 100%)',
+    souvenir: { name: 'Beret', icon: '\u{1F3A8}' },
+    emoji: '\u{1F5FC}',
+    message: '\u2708\uFE0F Bon voyage! You\'re going to Paris!'
+  },
+  {
+    name: 'Tokyo',
+    milestone: 100,
+    background: 'linear-gradient(180deg, #FFE0E0 0%, #FFCDD2 25%, #F8BBD0 45%, #FCE4EC 60%, #E8F5E9 75%, #A5D6A7 100%)',
+    souvenir: { name: 'Cherry Blossom', icon: '\u{1F338}' },
+    emoji: '\u{1F3EF}',
+    message: '\u2708\uFE0F Sugoi! You\'re flying to Tokyo!'
+  },
+  {
+    name: 'The Moon',
+    milestone: 150,
+    background: 'linear-gradient(180deg, #1A237E 0%, #283593 25%, #303F9F 45%, #3F51B5 60%, #424242 80%, #616161 100%)',
+    souvenir: { name: 'Space Helmet', icon: '\u{1F680}' },
+    emoji: '\u{1F319}',
+    message: '\u{1F680} Blast off! You\'re going to the Moon!'
+  },
+  {
+    name: 'Under the Sea',
+    milestone: 200,
+    background: 'linear-gradient(180deg, #0288D1 0%, #0277BD 25%, #01579B 50%, #004D40 70%, #00695C 85%, #00796B 100%)',
+    souvenir: { name: 'Mermaid Tail', icon: '\u{1F9DC}\u200D\u2640\uFE0F' },
+    emoji: '\u{1F420}',
+    message: '\u{1F30A} Splash! Diving Under the Sea!'
+  },
+  {
+    name: 'Candy Land',
+    milestone: 250,
+    background: 'linear-gradient(180deg, #F8BBD0 0%, #F48FB1 20%, #CE93D8 40%, #FFF9C4 60%, #FFCC80 80%, #A5D6A7 100%)',
+    souvenir: { name: 'Candy Cane', icon: '\u{1F36D}' },
+    emoji: '\u{1F36C}',
+    message: '\u{1F36D} Sweet! Welcome to Candy Land!'
+  }
+];
+
+const BUBBLE_COLORS = [
+  'linear-gradient(135deg,#E53935,#B71C1C)',
+  'linear-gradient(135deg,#8E24AA,#6A1B9A)',
+  'linear-gradient(135deg,#1E88E5,#1565C0)',
+  'linear-gradient(135deg,#00897B,#00695C)',
+  'linear-gradient(135deg,#F4511E,#D84315)',
+  'linear-gradient(135deg,#3949AB,#283593)',
+  'linear-gradient(135deg,#00ACC1,#00838F)',
+  'linear-gradient(135deg,#7CB342,#558B2F)',
+  'linear-gradient(135deg,#D81B60,#AD1457)',
+  'linear-gradient(135deg,#6D4C41,#4E342E)',
+];
+
+const MASTERY_COUNT = 3;
+
+// ============================================================
+//  STATE
+// ============================================================
+const STORAGE_KEY = 'sightWordAdventure_v2';
+
+function defaultState() {
+  return { coins: 0, totalCorrect: 0, unlockedCount: 0, wordClicks: {}, currentDestination: 0 };
+}
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (s && typeof s.coins === 'number') { if (!s.wordClicks) s.wordClicks = {}; if (s.currentDestination === undefined) s.currentDestination = 0; return s; }
+  } catch(e) {}
+  return defaultState();
+}
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+let state = loadState();
+let gamePaused = false;
+let currentTarget = null;
+let roundBubbles = [];
+let roundActive = false;
+let frameId = null;
+
+// ============================================================
+//  SVG DEFS & CHARACTER BASE
+// ============================================================
+function svgDefs() {
+  return `<defs>
+    <linearGradient id="rainbowGrad" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#E53935"/><stop offset="17%" stop-color="#FF6D00"/>
+      <stop offset="33%" stop-color="#FDD835"/><stop offset="50%" stop-color="#43A047"/>
+      <stop offset="67%" stop-color="#1E88E5"/><stop offset="83%" stop-color="#7B1FA2"/>
+      <stop offset="100%" stop-color="#E91E63"/>
+    </linearGradient>
+  </defs>`;
+}
+
+function characterBaseSVG() {
+  return `
+    <ellipse cx="100" cy="312" rx="36" ry="7" fill="rgba(0,0,0,0.1)"/>
+    <rect x="80" y="240" width="11" height="42" rx="5.5" fill="#FFE0BD"/>
+    <rect x="109" y="240" width="11" height="42" rx="5.5" fill="#FFE0BD"/>
+    <rect x="78" y="268" width="15" height="11" rx="5" fill="white"/>
+    <rect x="107" y="268" width="15" height="11" rx="5" fill="white"/>
+    <ellipse cx="86" cy="287" rx="14" ry="7" fill="#E91E63"/>
+    <ellipse cx="114" cy="287" rx="14" ry="7" fill="#E91E63"/>
+    <path d="M76 284 Q86 278 96 284" fill="none" stroke="#C2185B" stroke-width="1.5"/>
+    <path d="M104 284 Q114 278 124 284" fill="none" stroke="#C2185B" stroke-width="1.5"/>
+    <path d="M70 122 Q100 116 130 122 L146 240 Q100 252 54 240 Z" fill="#F48FB1"/>
+    <path d="M80 122 Q90 116 100 122" fill="white" opacity="0.5"/>
+    <path d="M100 122 Q110 116 120 122" fill="white" opacity="0.5"/>
+    <path d="M54 236 Q68 246 82 236 Q96 246 110 236 Q124 246 138 236 Q146 240 146 240 Q100 256 54 240 Z" fill="#F48FB1" opacity="0.7"/>
+    <rect x="112" y="172" width="15" height="13" rx="4" fill="white" opacity="0.4"/>
+    <circle cx="119" cy="176" r="3.5" fill="#FFD54F"/><circle cx="119" cy="176" r="1.8" fill="#FF8A65"/>
+    <ellipse cx="67" cy="126" rx="10" ry="8" fill="#F48FB1"/>
+    <ellipse cx="133" cy="126" rx="10" ry="8" fill="#F48FB1"/>
+    <rect x="52" y="126" width="11" height="38" rx="5.5" fill="#FFE0BD" transform="rotate(-8 57 126)"/>
+    <rect x="137" y="126" width="11" height="38" rx="5.5" fill="#FFE0BD" transform="rotate(8 143 126)"/>
+    <circle cx="53" cy="168" r="7" fill="#FFE0BD"/>
+    <circle cx="148" cy="168" r="7" fill="#FFE0BD"/>
+    <rect x="93" y="108" width="14" height="16" rx="7" fill="#FFE0BD"/>
+    <ellipse cx="100" cy="72" rx="36" ry="40" fill="#FFE0BD"/>
+    <ellipse cx="100" cy="58" rx="42" ry="38" fill="#FFD54F"/>
+    <path d="M60 60 Q52 100 56 168 Q58 172 62 168 Q61 105 65 70 Z" fill="#FFD54F"/>
+    <path d="M140 60 Q148 100 144 168 Q142 172 138 168 Q139 105 135 70 Z" fill="#FFD54F"/>
+    <path d="M62 58 Q72 26 92 34 Q86 44 78 54 Z" fill="#FFD54F"/>
+    <path d="M138 58 Q128 26 108 34 Q114 44 122 54 Z" fill="#FFD54F"/>
+    <path d="M78 50 Q92 22 108 34 Q100 40 90 48 Z" fill="#FFD54F"/>
+    <path d="M76 30 Q88 24 98 30 Q92 27 82 27 Z" fill="white" opacity="0.3"/>
+    <g transform="translate(100,30)">
+      <path d="M0 0 Q-22 -15 -12 0 Q-22 15 0 0" fill="#FF4081"/>
+      <path d="M0 0 Q22 -15 12 0 Q22 15 0 0" fill="#FF4081"/>
+      <circle cx="0" cy="0" r="4.5" fill="#E91E63"/>
+      <circle cx="-10" cy="-5" r="2" fill="white" opacity="0.35"/>
+      <circle cx="10" cy="-5" r="2" fill="white" opacity="0.35"/>
+    </g>
+    <ellipse cx="86" cy="72" rx="9.5" ry="11" fill="white"/>
+    <ellipse cx="114" cy="72" rx="9.5" ry="11" fill="white"/>
+    <ellipse cx="87" cy="73" rx="7" ry="8" fill="#4FC3F7"/>
+    <ellipse cx="115" cy="73" rx="7" ry="8" fill="#4FC3F7"/>
+    <circle cx="88" cy="74" r="4.5" fill="#1A237E"/>
+    <circle cx="116" cy="74" r="4.5" fill="#1A237E"/>
+    <circle cx="90" cy="69" r="3" fill="white"/><circle cx="118" cy="69" r="3" fill="white"/>
+    <circle cx="85" cy="77" r="1.8" fill="white"/><circle cx="113" cy="77" r="1.8" fill="white"/>
+    <path d="M76 63 Q79 59 81 62" fill="none" stroke="#5D4037" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M91 61 Q93 57 95 61" fill="none" stroke="#5D4037" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M105 61 Q107 57 109 61" fill="none" stroke="#5D4037" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M119 63 Q121 59 124 62" fill="none" stroke="#5D4037" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M80 60 Q86 56 92 60" fill="none" stroke="#C68A2E" stroke-width="1.3" stroke-linecap="round"/>
+    <path d="M108 60 Q114 56 120 60" fill="none" stroke="#C68A2E" stroke-width="1.3" stroke-linecap="round"/>
+    <path d="M97 83 Q100 87 103 83" fill="none" stroke="#E8A87C" stroke-width="1.5" stroke-linecap="round"/>
+    <path d="M84 91 Q100 104 116 91" fill="#FF8A80" stroke="#E57373" stroke-width="1.2" stroke-linecap="round"/>
+    <ellipse cx="100" cy="96" rx="5" ry="3.5" fill="#EF9A9A"/>
+    <ellipse cx="72" cy="84" rx="8" ry="4.5" fill="#FFAB91" opacity="0.45"/>
+    <ellipse cx="128" cy="84" rx="8" ry="4.5" fill="#FFAB91" opacity="0.45"/>
+    <circle cx="76" cy="82" r="1" fill="#DEB887" opacity="0.4"/>
+    <circle cx="80" cy="85" r="1" fill="#DEB887" opacity="0.4"/>
+    <circle cx="120" cy="82" r="1" fill="#DEB887" opacity="0.4"/>
+    <circle cx="124" cy="85" r="1" fill="#DEB887" opacity="0.4"/>
+    <ellipse cx="86" cy="72" rx="10.5" ry="12" fill="#FFE0BD" class="blink-overlay"/>
+    <ellipse cx="114" cy="72" rx="10.5" ry="12" fill="#FFE0BD" class="blink-overlay"/>
+  `;
+}
+
+// ============================================================
+//  ACCESSORY SVG FUNCTIONS
+// ============================================================
+function acc_goggles() {
+  return `<g>
+    <line x1="64" y1="72" x2="42" y2="66" stroke="#00ACC1" stroke-width="3.5" stroke-linecap="round"/>
+    <line x1="136" y1="72" x2="158" y2="66" stroke="#00ACC1" stroke-width="3.5" stroke-linecap="round"/>
+    <ellipse cx="86" cy="72" rx="18" ry="14" fill="none" stroke="#00ACC1" stroke-width="4"/>
+    <ellipse cx="114" cy="72" rx="18" ry="14" fill="none" stroke="#00ACC1" stroke-width="4"/>
+    <rect x="97" y="69" width="6" height="6" rx="2" fill="#00838F"/>
+    <ellipse cx="86" cy="72" rx="14" ry="10" fill="#4DD0E1" opacity="0.25"/>
+    <ellipse cx="114" cy="72" rx="14" ry="10" fill="#4DD0E1" opacity="0.25"/>
+    <ellipse cx="80" cy="67" rx="4" ry="2.5" fill="white" opacity="0.35"/>
+    <ellipse cx="108" cy="67" rx="4" ry="2.5" fill="white" opacity="0.35"/>
+  </g>`;
+}
+function acc_hat() {
+  return `<g>
+    <ellipse cx="100" cy="40" rx="44" ry="8" fill="#6A1B9A"/>
+    <path d="M62 40 Q62 12 100 10 Q138 12 138 40" fill="#8E24AA"/>
+    <ellipse cx="100" cy="40" rx="44" ry="8" fill="#6A1B9A"/>
+    <rect x="62" y="34" width="76" height="7" rx="2" fill="#E91E63"/>
+    <path d="M130 28 Q155 5 148 -4 Q142 10 125 24" fill="#E53935"/>
+    <path d="M132 26 Q152 8 146 -2" fill="none" stroke="#FF5252" stroke-width="1.5"/>
+    <circle cx="148" cy="-4" r="3" fill="#FF8A80"/>
+  </g>`;
+}
+function acc_gown() {
+  return `<g>
+    <path d="M68 150 Q100 144 132 150 L145 152 Q100 148 55 152 Z" fill="#F8BBD0"/>
+    <path d="M50 155 Q28 210 18 285 Q100 310 182 285 Q172 210 150 155 Z" fill="#F48FB1"/>
+    <path d="M55 160 Q38 218 30 280 Q100 302 170 280 Q162 218 145 160 Z" fill="#F8BBD0" opacity="0.6"/>
+    <path d="M18 282 Q50 296 100 300 Q150 296 182 282 Q160 300 100 306 Q40 300 18 282 Z" fill="#EC407A" opacity="0.5"/>
+    <circle cx="80" cy="220" r="2" fill="white" opacity="0.6"/>
+    <circle cx="120" cy="240" r="2.5" fill="white" opacity="0.5"/>
+    <circle cx="100" cy="260" r="2" fill="white" opacity="0.6"/>
+    <circle cx="60" cy="255" r="1.5" fill="white" opacity="0.4"/>
+    <circle cx="140" cy="230" r="2" fill="white" opacity="0.5"/>
+  </g>`;
+}
+function acc_slippers() {
+  return `<g>
+    <ellipse cx="86" cy="288" rx="16" ry="8" fill="rgba(180,220,255,0.55)" stroke="#90CAF9" stroke-width="1.5"/>
+    <ellipse cx="114" cy="288" rx="16" ry="8" fill="rgba(180,220,255,0.55)" stroke="#90CAF9" stroke-width="1.5"/>
+    <circle cx="80" cy="285" r="1.8" fill="white" opacity="0.8"/>
+    <circle cx="88" cy="283" r="1.2" fill="white" opacity="0.7"/>
+    <circle cx="108" cy="285" r="1.8" fill="white" opacity="0.8"/>
+    <circle cx="116" cy="283" r="1.2" fill="white" opacity="0.7"/>
+  </g>`;
+}
+function acc_tutu() {
+  return `<g>
+    <path d="M56 200 Q38 212 32 228 Q100 248 168 228 Q162 212 144 200 Q100 208 56 200" fill="#FCE4EC" opacity="0.85"/>
+    <path d="M52 204 Q32 218 26 236 Q100 258 174 236 Q168 218 148 204 Q100 214 52 204" fill="#F8BBD0" opacity="0.65"/>
+    <path d="M48 208 Q28 224 22 244 Q100 266 178 244 Q172 224 152 208 Q100 220 48 208" fill="#F48FB1" opacity="0.45"/>
+  </g>`;
+}
+function acc_crown() {
+  return `<g>
+    <path d="M70 28 L78 6 L88 20 L100 -2 L112 20 L122 6 L130 28 Z" fill="#FFD700"/>
+    <rect x="70" y="28" width="60" height="8" rx="2" fill="#FFC107"/>
+    <circle cx="100" cy="6" r="4" fill="#E91E63"/>
+    <circle cx="82" cy="16" r="3" fill="#2196F3"/>
+    <circle cx="118" cy="16" r="3" fill="#4CAF50"/>
+    <circle cx="78" cy="32" r="1.5" fill="white" opacity="0.6"/>
+    <circle cx="100" cy="32" r="1.5" fill="white" opacity="0.6"/>
+    <circle cx="122" cy="32" r="1.5" fill="white" opacity="0.6"/>
+  </g>`;
+}
+function acc_wings() {
+  return `<g>
+    <ellipse cx="36" cy="148" rx="40" ry="48" fill="#CE93D8" opacity="0.6"/>
+    <ellipse cx="42" cy="195" rx="28" ry="32" fill="#BA68C8" opacity="0.5"/>
+    <ellipse cx="42" cy="148" rx="24" ry="30" fill="#E1BEE7" opacity="0.45"/>
+    <ellipse cx="164" cy="148" rx="40" ry="48" fill="#CE93D8" opacity="0.6"/>
+    <ellipse cx="158" cy="195" rx="28" ry="32" fill="#BA68C8" opacity="0.5"/>
+    <ellipse cx="158" cy="148" rx="24" ry="30" fill="#E1BEE7" opacity="0.45"/>
+    <circle cx="32" cy="135" r="7" fill="#9C27B0" opacity="0.35"/>
+    <circle cx="168" cy="135" r="7" fill="#9C27B0" opacity="0.35"/>
+  </g>`;
+}
+function acc_wand() {
+  return `<g>
+    <line x1="150" y1="170" x2="166" y2="110" stroke="#8D6E63" stroke-width="3.5" stroke-linecap="round"/>
+    <polygon points="166,82 172,100 190,102 176,112 180,130 166,120 152,130 156,112 142,102 160,100" fill="#FFD700"/>
+    <polygon points="166,88 170,100 182,101 174,108 177,122 166,115 155,122 158,108 150,101 162,100" fill="#FFF9C4"/>
+    <circle cx="178" cy="90" r="2.5" fill="#FFD700" opacity="0.8"/>
+    <circle cx="155" cy="95" r="2" fill="#FFD700" opacity="0.7"/>
+  </g>`;
+}
+function acc_flowercrown() {
+  return `<g>
+    <path d="M60 38 Q80 26 100 28 Q120 26 140 38" fill="none" stroke="#4CAF50" stroke-width="3.5"/>
+    <circle cx="62" cy="36" r="7" fill="#FF4081"/><circle cx="62" cy="36" r="3.5" fill="#FFD54F"/>
+    <circle cx="80" cy="29" r="6.5" fill="#FF9800"/><circle cx="80" cy="29" r="3" fill="#FFF9C4"/>
+    <circle cx="100" cy="26" r="8" fill="#E91E63"/><circle cx="100" cy="26" r="4" fill="#FFD54F"/>
+    <circle cx="120" cy="29" r="6.5" fill="#9C27B0"/><circle cx="120" cy="29" r="3" fill="#FFF9C4"/>
+    <circle cx="138" cy="36" r="7" fill="#FF5722"/><circle cx="138" cy="36" r="3.5" fill="#FFD54F"/>
+    <ellipse cx="71" cy="34" rx="4.5" ry="2.5" fill="#66BB6A" transform="rotate(-20 71 34)"/>
+    <ellipse cx="129" cy="34" rx="4.5" ry="2.5" fill="#66BB6A" transform="rotate(20 129 34)"/>
+  </g>`;
+}
+function acc_cape() {
+  return `<g>
+    <path d="M72 128 Q52 185 42 280 Q100 305 158 280 Q148 185 128 128 Z" fill="url(#rainbowGrad)" opacity="0.6"/>
+  </g>`;
+}
+function acc_necklace() {
+  const p = [];
+  for (let i = 0; i < 9; i++) {
+    const t = i / 8, x = 76 + t * 48, y = 118 + Math.sin(t * Math.PI) * 16;
+    p.push(`<circle cx="${x}" cy="${y}" r="${i===4?5.5:4}" fill="#FAFAFA" stroke="#E0E0E0" stroke-width="0.5"/>`);
+  }
+  return `<g><path d="M76 118 Q88 134 100 136 Q112 134 124 118" fill="none" stroke="#E8E8E8" stroke-width="2"/>${p.join('')}</g>`;
+}
+function acc_boots() {
+  return `<g>
+    <path d="M72 258 L68 288 L60 294 Q82 300 96 288 L92 258 Z" fill="#6A1B9A"/>
+    <rect x="70" y="255" width="24" height="7" rx="3" fill="#8E24AA"/>
+    <path d="M108 258 L104 288 L96 294 Q118 300 132 288 L128 258 Z" fill="#6A1B9A"/>
+    <rect x="106" y="255" width="24" height="7" rx="3" fill="#8E24AA"/>
+    <circle cx="82" cy="272" r="3.5" fill="#FFD700"/>
+    <circle cx="118" cy="272" r="3.5" fill="#FFD700"/>
+    <circle cx="76" cy="280" r="1.5" fill="white" opacity="0.5"/>
+    <circle cx="124" cy="278" r="1.5" fill="white" opacity="0.5"/>
+  </g>`;
+}
+
+// ============================================================
+//  SOUVENIR SVG FUNCTIONS (earned at destinations)
+// ============================================================
+function souvenir_beret() {
+  return `<g>
+    <ellipse cx="100" cy="32" rx="32" ry="10" fill="#E53935"/>
+    <path d="M68 32 Q68 14 100 12 Q132 14 132 32" fill="#EF5350"/>
+    <ellipse cx="100" cy="32" rx="32" ry="10" fill="#E53935"/>
+    <circle cx="100" cy="12" r="5" fill="#C62828"/>
+    <ellipse cx="90" cy="26" rx="6" ry="3" fill="#EF9A9A" opacity="0.4"/>
+  </g>`;
+}
+function souvenir_cherryblossom() {
+  return `<g transform="translate(58, 38) rotate(-20)">
+    <circle cx="0" cy="-8" r="6" fill="#F48FB1"/>
+    <circle cx="6" cy="-3" r="6" fill="#F48FB1"/>
+    <circle cx="4" cy="5" r="6" fill="#F48FB1"/>
+    <circle cx="-4" cy="5" r="6" fill="#F48FB1"/>
+    <circle cx="-6" cy="-3" r="6" fill="#F48FB1"/>
+    <circle cx="0" cy="0" r="4" fill="#FCE4EC"/>
+    <circle cx="0" cy="-1" r="2" fill="#FF80AB"/>
+  </g>`;
+}
+function souvenir_spacehelmet() {
+  return `<g>
+    <ellipse cx="100" cy="68" rx="44" ry="46" fill="rgba(200,230,255,0.25)" stroke="rgba(180,220,255,0.6)" stroke-width="2.5"/>
+    <ellipse cx="100" cy="68" rx="40" ry="42" fill="rgba(200,230,255,0.12)"/>
+    <ellipse cx="82" cy="52" rx="12" ry="8" fill="white" opacity="0.2" transform="rotate(-20 82 52)"/>
+  </g>`;
+}
+function souvenir_mermaidtail() {
+  return `<g>
+    <path d="M80 272 Q76 292 72 310 Q65 318 58 312 Q65 306 68 296 Z" fill="#26C6DA" opacity="0.8"/>
+    <path d="M120 272 Q124 292 128 310 Q135 318 142 312 Q135 306 132 296 Z" fill="#26C6DA" opacity="0.8"/>
+    <ellipse cx="86" cy="274" rx="16" ry="6" fill="#4DD0E1" opacity="0.5"/>
+    <ellipse cx="114" cy="274" rx="16" ry="6" fill="#4DD0E1" opacity="0.5"/>
+    <circle cx="78" cy="268" r="2" fill="#80DEEA" opacity="0.6"/>
+    <circle cx="122" cy="268" r="2" fill="#80DEEA" opacity="0.6"/>
+    <circle cx="90" cy="280" r="1.5" fill="white" opacity="0.4"/>
+    <circle cx="110" cy="280" r="1.5" fill="white" opacity="0.4"/>
+  </g>`;
+}
+function souvenir_candycane() {
+  return `<g>
+    <rect x="148" y="130" width="6" height="46" rx="3" fill="white" transform="rotate(10 151 153)"/>
+    <rect x="148" y="130" width="6" height="8" rx="3" fill="#E53935" transform="rotate(10 151 134)"/>
+    <rect x="148" y="144" width="6" height="8" rx="3" fill="#E53935" transform="rotate(10 151 148)"/>
+    <rect x="148" y="158" width="6" height="8" rx="3" fill="#E53935" transform="rotate(10 151 162)"/>
+    <path d="M154 130 Q154 116 144 116 Q134 116 134 128" fill="none" stroke="white" stroke-width="6" stroke-linecap="round" transform="rotate(10 144 123)"/>
+    <path d="M154 130 Q154 118 146 117" fill="none" stroke="#E53935" stroke-width="6" stroke-linecap="round" stroke-dasharray="8 8" transform="rotate(10 150 123)"/>
+  </g>`;
+}
+
+const SOUVENIR_SVG_FNS = [
+  null, // Home has no souvenir
+  souvenir_beret,
+  souvenir_cherryblossom,
+  souvenir_spacehelmet,
+  souvenir_mermaidtail,
+  souvenir_candycane
+];
+
+const ACC_SVG_FNS = [
+  acc_goggles, acc_hat, acc_gown, acc_slippers, acc_tutu, acc_crown,
+  acc_wings, acc_wand, acc_flowercrown, acc_cape, acc_necklace, acc_boots
+];
+
+// ============================================================
+//  BUILD CHARACTER
+// ============================================================
+function buildCharacterSVG(displayWidth, unlockedOverride) {
+  const w = displayWidth || 180;
+  const h = Math.round(w * 340 / 200);
+  const unlocked = (unlockedOverride !== undefined) ? unlockedOverride : state.unlockedCount;
+  let behind = '', front = '';
+  for (let i = 0; i < unlocked; i++) {
+    if (ACCESSORIES[i].behind) behind += ACC_SVG_FNS[i]();
+    else front += ACC_SVG_FNS[i]();
+  }
+  // Add souvenir accessories from destinations
+  let souvenirs = '';
+  const destCount = (unlockedOverride !== undefined) ? state.currentDestination : state.currentDestination;
+  for (let d = 1; d <= destCount; d++) {
+    if (SOUVENIR_SVG_FNS[d]) souvenirs += SOUVENIR_SVG_FNS[d]();
+  }
+  return `<svg viewBox="0 0 200 340" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+    ${svgDefs()}${behind}${characterBaseSVG()}${front}${souvenirs}</svg>`;
+}
+function renderCharacter() {
+  document.getElementById('characterContainer').innerHTML = buildCharacterSVG();
+}
+
+// ============================================================
+//  SPEECH
+// ============================================================
+function speakWord(word) {
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(word);
+    u.rate = 0.72; u.pitch = 1.2; u.volume = 1;
+    const voices = speechSynthesis.getVoices();
+    const preferred =
+         voices.find(v => v.name === 'Samantha' && v.lang === 'en-US')
+      || voices.find(v => v.name.includes('Samantha'))
+      || voices.find(v => v.lang === 'en-US' && !/Alex|Daniel|Fred|Tom|Aaron|Ralph/i.test(v.name))
+      || voices.find(v => v.lang === 'en-US');
+    if (preferred) u.voice = preferred;
+    speechSynthesis.speak(u);
+  } catch(e) {}
+}
+if (speechSynthesis.onvoiceschanged !== undefined)
+  speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+speechSynthesis.getVoices();
+
+// ============================================================
+//  SOUNDS
+// ============================================================
+function playPopSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(500, now);
+    osc.frequency.linearRampToValueAtTime(1200, now + 0.1);
+    gain.gain.setValueAtTime(0.13, now);
+    gain.gain.linearRampToValueAtTime(0, now + 0.15);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.2);
+    setTimeout(() => ctx.close(), 300);
+  } catch(e) {}
+}
+function playCoinSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    [1200,1500,1800].forEach((f,i) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, now+i*0.08);
+      gain.gain.linearRampToValueAtTime(0.1, now+i*0.08+0.02);
+      gain.gain.linearRampToValueAtTime(0, now+i*0.08+0.12);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now+i*0.08); osc.stop(now+i*0.08+0.15);
+    });
+    setTimeout(() => ctx.close(), 500);
+  } catch(e) {}
+}
+function playWrongSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(330, now);
+    osc.frequency.linearRampToValueAtTime(220, now + 0.22);
+    gain.gain.setValueAtTime(0.09, now);
+    gain.gain.linearRampToValueAtTime(0, now + 0.25);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.3);
+    setTimeout(() => ctx.close(), 400);
+  } catch(e) {}
+}
+function playFanfare() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    [523,659,784,1047].forEach((f,i) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = 'triangle'; osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, now+i*0.15);
+      gain.gain.linearRampToValueAtTime(0.12, now+i*0.15+0.03);
+      gain.gain.linearRampToValueAtTime(i===3?0.1:0, now+i*0.15+(i===3?0.5:0.14));
+      if (i===3) gain.gain.linearRampToValueAtTime(0, now+i*0.15+0.6);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now+i*0.15); osc.stop(now+i*0.15+0.7);
+    });
+    setTimeout(() => ctx.close(), 1500);
+  } catch(e) {}
+}
+
+// ============================================================
+//  WORD SELECTION & DISTRACTORS
+// ============================================================
+function pickTarget() {
+  const pool = [];
+  WORDS.forEach(word => {
+    const correct = state.wordClicks[word] || 0;
+    const mastered = correct >= MASTERY_COUNT;
+    const isPriority = PRIORITY_WORDS.includes(word);
+    let weight;
+    if (mastered) weight = 1;
+    else if (isPriority) weight = Math.max(2, 7 - correct);
+    else weight = Math.max(1, 4 - correct);
+    for (let i = 0; i < weight; i++) pool.push(word);
+  });
+  let word, attempts = 0;
+  do {
+    word = pool[Math.floor(Math.random() * pool.length)];
+    attempts++;
+  } while (word === currentTarget && attempts < 40);
+  return word;
+}
+
+function findDistractors(target, count) {
+  const candidates = WORDS.filter(w => w !== target);
+  const scored = candidates.map(w => {
+    let score = 0;
+    if (w[0] === target[0]) score += 4;
+    if (w[w.length - 1] === target[target.length - 1]) score += 2;
+    const lenDiff = Math.abs(w.length - target.length);
+    if (lenDiff === 0) score += 3;
+    else if (lenDiff === 1) score += 2;
+    else if (lenDiff === 2) score += 1;
+    if (w.length >= 2 && target.length >= 2 && w.slice(-2) === target.slice(-2)) score += 3;
+    const tSet = new Set(target);
+    [...new Set(w)].forEach(c => { if (tSet.has(c)) score += 0.5; });
+    score += Math.random() * 3;
+    return { word: w, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, count).map(s => s.word);
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+// ============================================================
+//  ROUND MANAGEMENT
+// ============================================================
+function startNewRound() {
+  clearRoundBubbles();
+  currentTarget = pickTarget();
+  displayTarget(currentTarget);
+
+  // Speak after a short pause so UI updates first
+  setTimeout(() => speakWord(currentTarget), 200);
+
+  const distractorCount = 3;
+  const distractors = findDistractors(currentTarget, distractorCount);
+  const bubbleWords = shuffle([currentTarget, ...distractors]);
+
+  const area = document.getElementById('gameArea');
+  const areaW = area.clientWidth;
+  const areaH = area.clientHeight;
+  const count = bubbleWords.length;
+  const ySpacing = Math.min(120, (areaH - 150) / count);
+  const yStart = (areaH - (count - 1) * ySpacing) / 2;
+
+  bubbleWords.forEach((word, i) => {
+    setTimeout(() => {
+      if (!roundActive) return;
+      const startX = areaW + 40 + i * 100;
+      const startY = yStart + i * ySpacing + (Math.random() * 30 - 15);
+      spawnBubble(word, word === currentTarget, startX, startY);
+    }, i * 350);
+  });
+
+  roundActive = true;
+}
+
+function clearRoundBubbles() {
+  roundBubbles.forEach(b => { if (b.el.parentNode) b.el.remove(); });
+  roundBubbles = [];
+}
+
+function displayTarget(word) {
+  document.getElementById('targetWord').textContent = word;
+}
+
+function spawnBubble(word, isTarget, startX, startY) {
+  const el = document.createElement('div');
+  el.className = 'word-bubble';
+  el.textContent = word;
+
+  const colorIdx = Math.floor(Math.random() * BUBBLE_COLORS.length);
+  const bg = BUBBLE_COLORS[colorIdx];
+  el.style.background = bg;
+
+  const speed = 0.7 + Math.random() * 0.49;
+
+  const bubbleObj = {
+    el, word, isTarget, bg,
+    x: startX, y: startY,
+    vx: -speed, vy: 0,
+    wobbleAmp: 0.25 + Math.random() * 0.35,
+    wobbleFreq: 0.0012 + Math.random() * 0.0012,
+    wobblePhase: Math.random() * Math.PI * 2,
+    clicking: false
+  };
+
+  el.style.transform = `translate(${startX}px, ${startY}px)`;
+  el.style.opacity = '0';
+  requestAnimationFrame(() => {
+    el.style.transition = 'opacity 0.35s';
+    el.style.opacity = '1';
+  });
+
+  el.addEventListener('click', (e) => { e.stopPropagation(); handleBubbleClick(bubbleObj); });
+  el.addEventListener('touchend', (e) => { e.preventDefault(); });
+
+  document.getElementById('gameArea').appendChild(el);
+  roundBubbles.push(bubbleObj);
+}
+
+// ============================================================
+//  BUBBLE MOVEMENT
+// ============================================================
+function updateBubbles() {
+  if (!roundActive) return;
+  const now = Date.now();
+  let targetGone = false;
+
+  for (let i = roundBubbles.length - 1; i >= 0; i--) {
+    const b = roundBubbles[i];
+    if (!b.el.parentNode) { roundBubbles.splice(i, 1); continue; }
+    if (b.clicking) continue;
+
+    b.x += b.vx;
+    const wobble = Math.sin(b.wobblePhase + now * b.wobbleFreq) * b.wobbleAmp;
+    b.y += wobble;
+    b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
+
+    if (b.x < -220) {
+      if (b.isTarget) targetGone = true;
+      b.el.remove();
+      roundBubbles.splice(i, 1);
+    }
+  }
+
+  if (targetGone && roundActive) {
+    // Target missed - respawn same round
+    roundActive = false;
+    setTimeout(() => {
+      clearRoundBubbles();
+      respawnSameTarget();
+    }, 600);
+  }
+}
+
+function respawnSameTarget() {
+  displayTarget(currentTarget);
+  speakWord(currentTarget);
+
+  const distractors = findDistractors(currentTarget, 3);
+  const bubbleWords = shuffle([currentTarget, ...distractors]);
+  const area = document.getElementById('gameArea');
+  const areaW = area.clientWidth;
+  const areaH = area.clientHeight;
+  const count = bubbleWords.length;
+  const ySpacing = Math.min(120, (areaH - 150) / count);
+  const yStart = (areaH - (count - 1) * ySpacing) / 2;
+
+  roundActive = true;
+  bubbleWords.forEach((word, i) => {
+    setTimeout(() => {
+      if (!roundActive) return;
+      const startX = areaW + 40 + i * 100;
+      const startY = yStart + i * ySpacing + (Math.random() * 30 - 15);
+      spawnBubble(word, word === currentTarget, startX, startY);
+    }, i * 350);
+  });
+}
+
+// ============================================================
+//  CLICK HANDLING
+// ============================================================
+function handleBubbleClick(bubble) {
+  if (bubble.clicking) return;
+
+  if (bubble.word === currentTarget) {
+    handleCorrectClick(bubble);
+  } else {
+    handleIncorrectClick(bubble);
+  }
+}
+
+function handleCorrectClick(bubble) {
+  bubble.clicking = true;
+  roundActive = false;
+
+  // Track mastery
+  state.wordClicks[currentTarget] = (state.wordClicks[currentTarget] || 0) + 1;
+  state.totalCorrect++;
+
+  const rect = bubble.el.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  // Green flash
+  bubble.el.classList.add('correct-flash');
+  playPopSound();
+  speakWord(currentTarget);
+
+  // Sparkles
+  createClickSparkles(cx, cy);
+
+  // Dissolve after brief flash
+  setTimeout(() => {
+    bubble.el.classList.add('dissolving');
+  }, 200);
+
+  // Fade out other bubbles
+  roundBubbles.forEach(b => {
+    if (b !== bubble && b.el.parentNode) {
+      b.el.classList.add('fade-out');
+      setTimeout(() => { if (b.el.parentNode) b.el.remove(); }, 450);
+    }
+  });
+
+  // Coin animation
+  setTimeout(() => {
+    if (bubble.el.parentNode) bubble.el.remove();
+    animateCoinToCounter(cx, cy);
+  }, 550);
+
+  // Character celebration
+  triggerCelebration();
+
+  saveState();
+  updateScoreDisplay();
+
+  // Check if we've hit a destination milestone
+  const hitMilestone = checkDestinationMilestone();
+
+  // If milestone hit, pause immediately so shop doesn't interfere
+  if (hitMilestone) {
+    gamePaused = true;
+  } else {
+    // Next round after celebration
+    setTimeout(() => {
+      if (!gamePaused) startNewRound();
+    }, 1600);
+  }
+}
+
+function handleIncorrectClick(bubble) {
+  bubble.clicking = true;
+
+  // Red flash + shake on bubble
+  bubble.el.style.background = 'linear-gradient(135deg, #EF5350, #B71C1C)';
+  bubble.el.classList.add('shake');
+  playWrongSound();
+
+  // Girl falls down
+  const charEl = document.getElementById('characterContainer');
+  charEl.classList.remove('character-fall');
+  void charEl.offsetWidth;
+  charEl.classList.add('character-fall');
+
+  setTimeout(() => {
+    bubble.el.classList.remove('shake');
+    bubble.el.style.background = bubble.bg;
+    bubble.clicking = false;
+  }, 550);
+
+  setTimeout(() => {
+    charEl.classList.remove('character-fall');
+  }, 1000);
+}
+
+// ============================================================
+//  SPARKLES & COIN ANIMATION
+// ============================================================
+function createClickSparkles(cx, cy) {
+  const colors = ['#FFD700','#FF4081','#FF6D00','#00E5FF','#76FF03','white','#E040FB'];
+  for (let i = 0; i < 12; i++) {
+    const sp = document.createElement('div');
+    sp.className = 'click-sparkle';
+    const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.4;
+    const dist = 45 + Math.random() * 55;
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist;
+    const sz = 5 + Math.random() * 9;
+    const c = colors[Math.floor(Math.random() * colors.length)];
+    sp.style.cssText = `left:${cx-sz/2}px;top:${cy-sz/2}px;--size:${sz}px;--color:${c};--dx:${dx}px;--dy:${dy}px;`;
+    document.body.appendChild(sp);
+    setTimeout(() => sp.remove(), 700);
+  }
+}
+
+function animateCoinToCounter(startX, startY) {
+  const coin = document.createElement('div');
+  coin.className = 'flying-coin';
+  coin.textContent = '\u{1FA99}';
+  coin.style.left = startX + 'px';
+  coin.style.top = startY + 'px';
+  document.body.appendChild(coin);
+
+  const counter = document.getElementById('coinDisplay');
+  const cr = counter.getBoundingClientRect();
+  const dx = cr.left + cr.width / 2 - startX;
+  const dy = cr.top + cr.height / 2 - startY;
+
+  requestAnimationFrame(() => {
+    coin.style.transform = `translate(${dx}px, ${dy}px) scale(0.4)`;
+    coin.style.opacity = '0.7';
+  });
+
+  setTimeout(() => {
+    coin.remove();
+    state.coins++;
+    playCoinSound();
+    updateCoinDisplay();
+
+    counter.classList.remove('pulse');
+    void counter.offsetWidth;
+    counter.classList.add('pulse');
+
+    if (state.coins >= 5 && state.unlockedCount < ACCESSORIES.length && !gamePaused) {
+      setTimeout(() => openShop(), 400);
+    }
+    saveState();
+  }, 750);
+}
+
+function triggerCelebration() {
+  const c = document.getElementById('characterContainer');
+  const r = ['celebrate-bounce','celebrate-wiggle','celebrate-spin'];
+  const pick = r[Math.floor(Math.random() * r.length)];
+  c.classList.remove(...r);
+  void c.offsetWidth;
+  c.classList.add(pick);
+  setTimeout(() => c.classList.remove(pick), 1000);
+}
+
+// ============================================================
+//  CELEBRATION SEQUENCE
+// ============================================================
+let celebTimers = [];
+let celebInterval = null;
+
+function playLongFanfare() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    // Ascending triumphant notes: C5, E5, G5, C6 then a sustained chord
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((f, i) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = 'triangle'; osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, now + i * 0.2);
+      gain.gain.linearRampToValueAtTime(0.14, now + i * 0.2 + 0.04);
+      gain.gain.linearRampToValueAtTime(i === 3 ? 0.12 : 0.02, now + i * 0.2 + (i === 3 ? 0.8 : 0.18));
+      if (i === 3) gain.gain.linearRampToValueAtTime(0, now + i * 0.2 + 1.2);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now + i * 0.2); osc.stop(now + i * 0.2 + 1.3);
+    });
+    // Sustained chord: C5+E5+G5
+    [523, 659, 784].forEach((f, i) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = f;
+      const start = now + 1.0;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.06, start + 0.1);
+      gain.gain.linearRampToValueAtTime(0.05, start + 1.5);
+      gain.gain.linearRampToValueAtTime(0, start + 2.5);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(start); osc.stop(start + 2.6);
+    });
+    // Shimmer effect
+    const shimmer = ctx.createOscillator(), sGain = ctx.createGain();
+    shimmer.type = 'sine'; shimmer.frequency.value = 2093;
+    sGain.gain.setValueAtTime(0, now + 0.8);
+    sGain.gain.linearRampToValueAtTime(0.03, now + 1.0);
+    sGain.gain.linearRampToValueAtTime(0, now + 3.0);
+    shimmer.connect(sGain); sGain.connect(ctx.destination);
+    shimmer.start(now + 0.8); shimmer.stop(now + 3.1);
+    setTimeout(() => ctx.close(), 4000);
+  } catch(e) {}
+}
+
+function spawnConfetti(count) {
+  const container = document.getElementById('celebConfettiContainer');
+  const colors = ['#FF4081','#FFD700','#00E5FF','#76FF03','#FF6D00','#E040FB','#FF1744','#00BFA5','#FFEA00','#D500F9'];
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    const isCircle = Math.random() > 0.5;
+    const size = 6 + Math.random() * 10;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const drift = (Math.random() - 0.5) * 80;
+    const dur = 2.5 + Math.random() * 2.5;
+    const delay = Math.random() * 0.8;
+    piece.style.cssText = `
+      left: ${Math.random() * 100}%;
+      width: ${isCircle ? size : size * 0.4}px;
+      height: ${size}px;
+      background: ${color};
+      border-radius: ${isCircle ? '50%' : '2px'};
+      --drift: ${drift}px;
+      --fall-dur: ${dur}s;
+      animation-delay: ${delay}s;
+    `;
+    container.appendChild(piece);
+    // Auto-remove after animation
+    setTimeout(() => { if (piece.parentNode) piece.remove(); }, (dur + delay) * 1000 + 200);
+  }
+}
+
+function createStarburst() {
+  const layer = document.getElementById('celebrationLayer');
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight * 0.45;
+  const colors = ['#FFD700','#FF4081','#00E5FF','#76FF03','#FF6D00','#E040FB','white','#FFEA00'];
+  for (let i = 0; i < 18; i++) {
+    const spark = document.createElement('div');
+    spark.className = 'celeb-sparkle';
+    const angle = (i / 18) * Math.PI * 2;
+    const dist = 80 + Math.random() * 120;
+    const sx = Math.cos(angle) * dist;
+    const sy = Math.sin(angle) * dist;
+    const size = 6 + Math.random() * 10;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    spark.style.cssText = `
+      left: ${cx - size/2}px; top: ${cy - size/2}px;
+      width: ${size}px; height: ${size}px;
+      background: ${color};
+      --sx: ${sx}px; --sy: ${sy}px;
+    `;
+    layer.appendChild(spark);
+    setTimeout(() => { if (spark.parentNode) spark.remove(); }, 1300);
+  }
+}
+
+function startCelebration(dest) {
+  // Clear any previous celebration
+  cleanupCelebration();
+
+  const layer = document.getElementById('celebrationLayer');
+  const scoreBurst = document.getElementById('celebScoreBurst');
+  const celebEmoji = document.getElementById('celebEmoji');
+  const celebMsg = document.getElementById('celebMessage');
+
+  layer.style.opacity = '1';
+  layer.classList.remove('fade-out');
+  scoreBurst.className = '';
+  celebEmoji.className = '';
+  celebMsg.className = '';
+  scoreBurst.textContent = '';
+  celebEmoji.textContent = '';
+  celebMsg.textContent = '';
+
+  // Phase 1: Confetti + fanfare + girl spin (0s)
+  spawnConfetti(25);
+  playLongFanfare();
+  const charEl = document.getElementById('characterContainer');
+  charEl.classList.remove('celebrate-destination');
+  void charEl.offsetWidth;
+  charEl.classList.add('celebrate-destination');
+
+  // Continuous confetti waves
+  celebInterval = setInterval(() => spawnConfetti(15), 1500);
+
+  // Phase 3: Score burst (1s)
+  celebTimers.push(setTimeout(() => {
+    scoreBurst.textContent = dest.milestone + ' POINTS!';
+    scoreBurst.classList.add('active');
+  }, 1000));
+
+  // Phase 4: Destination emoji fly-in (3s)
+  celebTimers.push(setTimeout(() => {
+    celebEmoji.textContent = dest.emoji;
+    celebEmoji.classList.add('active');
+  }, 3000));
+
+  // Phase 5: Destination message (5s)
+  celebTimers.push(setTimeout(() => {
+    celebMsg.textContent = dest.message;
+    celebMsg.classList.add('active');
+  }, 5000));
+
+  // Phase 6: Starburst sparkles (6.5s)
+  celebTimers.push(setTimeout(() => {
+    createStarburst();
+  }, 6500));
+
+  // Second starburst wave (7.5s)
+  celebTimers.push(setTimeout(() => {
+    createStarburst();
+  }, 7500));
+
+  // Phase 7: Fade out celebration, show card (9s)
+  celebTimers.push(setTimeout(() => {
+    layer.classList.add('fade-out');
+    charEl.classList.remove('celebrate-destination');
+  }, 9000));
+
+  // Show the travel card (10s)
+  celebTimers.push(setTimeout(() => {
+    const card = document.getElementById('travelCard');
+    card.style.display = '';
+    card.style.animation = 'none';
+    void card.offsetWidth;
+    card.style.animation = 'shopEnter 0.5s ease-out';
+  }, 10000));
+}
+
+function cleanupCelebration() {
+  // Clear all timers
+  celebTimers.forEach(t => clearTimeout(t));
+  celebTimers = [];
+  if (celebInterval) { clearInterval(celebInterval); celebInterval = null; }
+
+  // Remove leftover confetti and sparkles
+  const container = document.getElementById('celebConfettiContainer');
+  if (container) container.innerHTML = '';
+  const layer = document.getElementById('celebrationLayer');
+  if (layer) {
+    layer.querySelectorAll('.celeb-sparkle').forEach(el => el.remove());
+    layer.style.opacity = '1';
+    layer.classList.remove('fade-out');
+  }
+
+  // Reset celebration elements
+  const scoreBurst = document.getElementById('celebScoreBurst');
+  const celebEmoji = document.getElementById('celebEmoji');
+  const celebMsg = document.getElementById('celebMessage');
+  if (scoreBurst) { scoreBurst.className = ''; scoreBurst.textContent = ''; }
+  if (celebEmoji) { celebEmoji.className = ''; celebEmoji.textContent = ''; }
+  if (celebMsg) { celebMsg.className = ''; celebMsg.textContent = ''; }
+
+  const charEl = document.getElementById('characterContainer');
+  if (charEl) charEl.classList.remove('celebrate-destination');
+}
+
+// ============================================================
+//  DESTINATION / TRAVEL
+// ============================================================
+function checkDestinationMilestone() {
+  const nextIdx = state.currentDestination + 1;
+  if (nextIdx >= DESTINATIONS.length) return false;
+  const next = DESTINATIONS[nextIdx];
+  if (state.totalCorrect >= next.milestone) {
+    setTimeout(() => showTravelOverlay(nextIdx), 1200);
+    return true;
+  }
+  return false;
+}
+
+function showTravelOverlay(destIdx) {
+  gamePaused = true;
+  roundActive = false;
+  clearRoundBubbles();
+  const dest = DESTINATIONS[destIdx];
+
+  // Setup card content (hidden initially)
+  document.getElementById('travelEmoji').textContent = dest.emoji;
+  document.getElementById('travelMessage').textContent = dest.message;
+  document.getElementById('travelDestName').textContent = dest.name;
+  document.getElementById('travelCard').style.display = 'none';
+
+  // Show overlay + start 10-second celebration
+  document.getElementById('travelOverlay').classList.add('show');
+  startCelebration(dest);
+}
+
+function applyDestinationBackground(destIdx) {
+  const dest = DESTINATIONS[destIdx];
+  document.getElementById('gameArea').style.background = dest.background;
+}
+
+function updatePassportDisplay() {
+  const dest = DESTINATIONS[state.currentDestination];
+  document.getElementById('passportDisplay').textContent = dest.emoji + ' ' + dest.name;
+}
+
+// ============================================================
+//  SHOP
+// ============================================================
+function openShop() {
+  gamePaused = true;
+  roundActive = false;
+  clearRoundBubbles();
+
+  const idx = state.unlockedCount;
+  if (idx >= ACCESSORIES.length) return;
+  const acc = ACCESSORIES[idx];
+
+  document.getElementById('shopTitle').textContent = `You earned: ${acc.name}!`;
+  document.getElementById('shopAccIcon').textContent = acc.icon;
+  document.getElementById('shopAccName').textContent = acc.name;
+  document.getElementById('shopPreview').innerHTML = buildCharacterSVG(145, idx + 1);
+  document.getElementById('shopOverlay').classList.add('show');
+  playFanfare();
+}
+
+function equipFromShop() {
+  state.unlockedCount++;
+  state.coins -= 5;
+  saveState();
+
+  document.getElementById('shopOverlay').classList.remove('show');
+  renderCharacter();
+  updateCoinDisplay();
+
+  if (state.unlockedCount >= ACCESSORIES.length) {
+    setTimeout(() => document.getElementById('allDoneOverlay').classList.add('show'), 500);
+  } else {
+    gamePaused = false;
+    setTimeout(() => startNewRound(), 400);
+  }
+}
+
+// ============================================================
+//  DISPLAY UPDATES
+// ============================================================
+function updateCoinDisplay() {
+  const disp = state.unlockedCount >= ACCESSORIES.length
+    ? `\u{1FA99} ${state.coins} (All collected!)`
+    : `\u{1FA99} ${state.coins} / 5`;
+  document.getElementById('coinDisplay').innerHTML = disp;
+}
+
+function updateScoreDisplay() {
+  document.getElementById('scoreCount').textContent = state.totalCorrect;
+}
+
+// ============================================================
+//  BACKGROUND CLOUDS
+// ============================================================
+function createClouds() {
+  const area = document.getElementById('gameArea');
+  for (let i = 0; i < 5; i++) {
+    const cloud = document.createElement('div');
+    cloud.className = 'bg-cloud';
+    cloud.style.top = (4 + Math.random() * 28) + '%';
+    cloud.style.width = (80 + Math.random() * 130) + 'px';
+    cloud.style.height = (30 + Math.random() * 40) + 'px';
+    cloud.style.animationDuration = (25 + Math.random() * 35) + 's';
+    cloud.style.animationDelay = (-Math.random() * 40) + 's';
+    cloud.style.opacity = 0.3 + Math.random() * 0.3;
+    area.appendChild(cloud);
+  }
+}
+
+// ============================================================
+//  GAME LOOP
+// ============================================================
+function gameFrame() {
+  if (!gamePaused) updateBubbles();
+  frameId = requestAnimationFrame(gameFrame);
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+renderCharacter();
+updateCoinDisplay();
+updateScoreDisplay();
+createClouds();
+
+// Restore destination background + passport from saved state
+if (state.currentDestination > 0) {
+  applyDestinationBackground(state.currentDestination);
+}
+updatePassportDisplay();
+
+// Hear-again button
+document.getElementById('hearAgainBtn').onclick = () => {
+  if (currentTarget) speakWord(currentTarget);
+};
+
+// Shop equip
+document.getElementById('shopEquipBtn').onclick = equipFromShop;
+
+// Travel "Let's Go!" button
+document.getElementById('travelGoBtn').onclick = () => {
+  cleanupCelebration();
+
+  const destIdx = state.currentDestination + 1;
+  state.currentDestination = destIdx;
+  saveState();
+
+  applyDestinationBackground(destIdx);
+  updatePassportDisplay();
+  renderCharacter();
+  document.getElementById('travelOverlay').classList.remove('show');
+
+  gamePaused = false;
+  setTimeout(() => startNewRound(), 400);
+};
+
+// All-done close
+document.getElementById('allDoneCloseBtn').onclick = () => {
+  document.getElementById('allDoneOverlay').classList.remove('show');
+  gamePaused = false;
+  startNewRound();
+};
+
+// Reset
+document.getElementById('resetBtn').onclick = () => {
+  if (confirm('Reset all progress? This will start the game over.')) {
+    state = defaultState();
+    saveState();
+    renderCharacter();
+    updateCoinDisplay();
+    updateScoreDisplay();
+    applyDestinationBackground(0);
+    updatePassportDisplay();
+    clearRoundBubbles();
+    roundActive = false;
+    currentTarget = null;
+    setTimeout(() => startNewRound(), 300);
+  }
+};
+
+// Start the game!
+frameId = requestAnimationFrame(gameFrame);
+startNewRound();
+</script>
+</body>
+</html>

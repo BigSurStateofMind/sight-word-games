@@ -1,0 +1,1765 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Sight Word Garden</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Comic Sans MS', 'Chalkboard SE', 'Marker Felt', cursive, sans-serif;
+  overflow: hidden;
+  height: 100vh; width: 100vw;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ===== TOP BAR ===== */
+#topBar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 64px;
+  background: rgba(255,255,255,0.93);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 14px; z-index: 100;
+  border-bottom: 3px solid rgba(0,0,0,0.1);
+}
+
+#plantProgress {
+  display: flex; align-items: center; gap: 8px;
+  background: linear-gradient(135deg, #A5D6A7, #66BB6A, #43A047);
+  padding: 10px 22px; border-radius: 26px;
+  font-size: 28px; font-weight: 900; color: #1B5E20;
+  box-shadow: 0 4px 16px rgba(76,175,80,0.45), 0 0 20px rgba(76,175,80,0.3);
+  white-space: nowrap;
+  min-width: 130px;
+  border: 3px solid #66BB6A;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  letter-spacing: 1px;
+}
+
+#targetArea {
+  display: flex; align-items: center; gap: 10px;
+}
+
+#hearAgainBtn {
+  background: linear-gradient(135deg, #CE93D8, #AB47BC);
+  border: 3px solid #8E24AA;
+  border-radius: 50%; width: 52px; height: 52px;
+  font-size: 26px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+  box-shadow: 0 3px 12px rgba(156,39,176,0.35);
+  color: #fff;
+}
+#hearAgainBtn:hover { transform: scale(1.15); }
+#hearAgainBtn:active { transform: scale(0.95); }
+
+#scoreDisplay {
+  font-size: 15px; color: #555; font-weight: bold; white-space: nowrap;
+}
+
+#gardenCount {
+  font-size: 13px; color: #555; font-weight: bold; white-space: nowrap;
+  background: rgba(255,255,255,0.7); padding: 4px 10px; border-radius: 12px;
+  border: 2px solid rgba(0,0,0,0.08);
+}
+
+/* ===== GAME AREA ===== */
+#gameArea {
+  position: fixed; top: 64px; left: 0; right: 0; bottom: 0;
+  overflow: hidden;
+}
+
+#skyZone {
+  position: absolute; top: 0; left: 0; right: 0;
+  height: 52%;
+  background: linear-gradient(180deg, #87CEEB 0%, #B3E5FC 60%, #E0F7FA 100%);
+  overflow: hidden;
+}
+
+#gardenZone {
+  position: absolute; bottom: 0; left: 0; right: 0;
+  height: 48%;
+  background: linear-gradient(180deg, #8BC34A 0%, #689F38 15%, #558B2F 35%, #5D4037 60%, #4E342E 80%, #3E2723 100%);
+  overflow: hidden;
+}
+
+/* ===== CLOUDS ===== */
+.bg-cloud {
+  position: absolute;
+  background: radial-gradient(ellipse, white 0%, rgba(255,255,255,0.2) 100%);
+  border-radius: 50%; pointer-events: none; z-index: 1;
+  animation: cloudDrift linear infinite;
+}
+@keyframes cloudDrift {
+  from { transform: translateX(-260px); }
+  to { transform: translateX(calc(100vw + 260px)); }
+}
+
+/* ===== BUTTERFLIES ===== */
+.butterfly {
+  position: absolute;
+  pointer-events: none;
+  z-index: 2;
+  animation: butterflyFloat linear infinite;
+}
+@keyframes butterflyFloat {
+  0% { transform: translateX(-60px) translateY(0); }
+  25% { transform: translateX(25vw) translateY(-20px); }
+  50% { transform: translateX(50vw) translateY(10px); }
+  75% { transform: translateX(75vw) translateY(-15px); }
+  100% { transform: translateX(calc(100vw + 60px)) translateY(5px); }
+}
+.butterfly svg {
+  animation: butterflyWings 0.3s ease-in-out infinite alternate;
+}
+@keyframes butterflyWings {
+  0% { transform: scaleX(1); }
+  100% { transform: scaleX(0.3); }
+}
+
+/* ===== WORD BUBBLES ===== */
+.word-bubble {
+  position: absolute; left: 0; top: 0;
+  font-size: 34px; font-weight: bold;
+  padding: 14px 30px; border-radius: 30px;
+  color: #fff;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.35);
+  box-shadow: 0 5px 18px rgba(0,0,0,0.22), inset 0 2px 4px rgba(255,255,255,0.25);
+  cursor: pointer; z-index: 10;
+  will-change: transform;
+  transition: filter 0.12s, box-shadow 0.12s;
+  -webkit-tap-highlight-color: transparent;
+}
+.word-bubble:hover { filter: brightness(1.12); }
+
+.word-bubble.correct-flash {
+  box-shadow: 0 0 28px 10px rgba(76,175,80,0.7), 0 5px 18px rgba(0,0,0,0.2);
+  filter: brightness(1.35);
+}
+
+@keyframes bubbleDissolve {
+  0% { opacity: 1; filter: brightness(1); }
+  25% { opacity: 1; filter: brightness(1.5); }
+  100% { opacity: 0; filter: brightness(2) blur(8px); }
+}
+.word-bubble.dissolving {
+  animation: bubbleDissolve 0.5s ease-out forwards !important;
+  pointer-events: none;
+}
+
+@keyframes shakeWord {
+  0%, 100% { margin-left: 0; }
+  15% { margin-left: -14px; }
+  30% { margin-left: 14px; }
+  45% { margin-left: -10px; }
+  60% { margin-left: 8px; }
+  75% { margin-left: -5px; }
+  90% { margin-left: 4px; }
+}
+.word-bubble.shake {
+  animation: shakeWord 0.5s ease-in-out;
+}
+
+.word-bubble.fade-out {
+  transition: opacity 0.4s;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* ===== SPARKLES ===== */
+.click-sparkle {
+  position: fixed;
+  width: var(--size); height: var(--size);
+  border-radius: 50%;
+  background: var(--color);
+  pointer-events: none; z-index: 150;
+  animation: sparkleFly 0.6s ease-out forwards;
+}
+@keyframes sparkleFly {
+  0% { transform: translate(0,0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+}
+
+/* ===== FLYING SEED ===== */
+.flying-seed {
+  position: fixed; font-size: 44px;
+  z-index: 200; pointer-events: none;
+  transition: transform 0.75s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.75s ease;
+  filter: drop-shadow(0 0 8px rgba(76,175,80,0.6));
+}
+@keyframes seedPulse {
+  0% { transform: scale(1); box-shadow: 0 4px 16px rgba(76,175,80,0.45); }
+  50% { transform: scale(1.25); box-shadow: 0 4px 24px rgba(76,175,80,0.7); }
+  100% { transform: scale(1); box-shadow: 0 4px 16px rgba(76,175,80,0.45); }
+}
+#plantProgress.pulse { animation: seedPulse 0.4s ease-out; }
+
+/* ===== PLANT GRID ===== */
+#plantGrid {
+  position: absolute;
+  top: 18%; left: 8%; right: 22%; bottom: 5%;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(4, 1fr);
+  gap: 2px;
+  z-index: 5;
+}
+
+.plant-slot {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  position: relative;
+}
+
+.plant-slot .plant-svg {
+  transform-origin: bottom center;
+  animation: plantSprout 0.8s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+@keyframes plantSprout {
+  0% { transform: scaleY(0) scaleX(0.5); opacity: 0; }
+  60% { transform: scaleY(1.15) scaleX(1.05); opacity: 1; }
+  100% { transform: scaleY(1) scaleX(1); opacity: 1; }
+}
+
+.plant-name {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255,255,255,0.92);
+  color: #2E7D32;
+  font-size: 11px;
+  font-weight: bold;
+  padding: 3px 8px;
+  border-radius: 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: namePopup 2.5s ease-out forwards;
+  z-index: 20;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+}
+@keyframes namePopup {
+  0% { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  15% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  80% { opacity: 1; transform: translateX(-50%) translateY(0); }
+  100% { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+}
+
+/* ===== CHARACTER ===== */
+#characterContainer {
+  position: absolute; right: 2%; bottom: 5%;
+  width: 130px; z-index: 20; pointer-events: none;
+  animation: charIdle 3s ease-in-out infinite;
+}
+#characterContainer svg { width: 100%; height: auto; }
+
+@keyframes charIdle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+#characterContainer.watering {
+  animation: waterAction 1.5s ease-in-out !important;
+}
+@keyframes waterAction {
+  0% { transform: translateY(0) rotate(0); }
+  30% { transform: translateY(-3px) rotate(-8deg); }
+  70% { transform: translateY(-3px) rotate(-8deg); }
+  100% { transform: translateY(0) rotate(0); }
+}
+
+@keyframes charFall {
+  0% { transform: translateY(0) rotate(0deg); }
+  20% { transform: translateY(0) rotate(15deg); }
+  40% { transform: translateY(20px) rotate(25deg); }
+  50% { transform: translateY(25px) rotate(30deg); }
+  75% { transform: translateY(25px) rotate(30deg); }
+  90% { transform: translateY(-5px) rotate(-3deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+#characterContainer.character-fall {
+  animation: charFall 1s ease-in-out !important;
+}
+
+.blink-overlay {
+  opacity: 0;
+  animation: blinkAnim 4s ease-in-out infinite;
+}
+@keyframes blinkAnim {
+  0%, 92%, 100% { opacity: 0; }
+  95%, 97% { opacity: 1; }
+}
+
+/* Water drops */
+.water-drop {
+  position: fixed;
+  width: 6px; height: 10px;
+  background: #42A5F5;
+  border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+  pointer-events: none;
+  z-index: 21;
+  animation: waterFall 0.8s ease-in forwards;
+  opacity: 0.8;
+}
+@keyframes waterFall {
+  0% { transform: translateY(0); opacity: 0.8; }
+  100% { transform: translateY(60px); opacity: 0; }
+}
+
+/* ===== CELEBRATION ===== */
+#celebrationOverlay {
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: none; align-items: center; justify-content: center; z-index: 300;
+}
+#celebrationOverlay.show { display: flex; }
+
+#celebrationLayer {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  pointer-events: none; z-index: 2; overflow: hidden;
+}
+#celebConfettiContainer {
+  position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+  overflow: hidden; pointer-events: none;
+}
+.confetti-piece {
+  position: absolute; top: -20px;
+  pointer-events: none;
+  animation: confettiFall var(--fall-dur, 3.5s) linear forwards;
+  opacity: 0.9;
+}
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg) translateX(0); opacity: 1; }
+  25% { transform: translateY(28vh) rotate(180deg) translateX(var(--drift, 30px)); opacity: 1; }
+  50% { transform: translateY(55vh) rotate(360deg) translateX(calc(var(--drift, 30px) * -0.5)); opacity: 0.9; }
+  75% { transform: translateY(82vh) rotate(540deg) translateX(var(--drift, 30px)); opacity: 0.7; }
+  100% { transform: translateY(110vh) rotate(720deg) translateX(0); opacity: 0; }
+}
+
+#celebScoreBurst {
+  position: absolute; top: 25%; left: 50%; transform: translate(-50%, -50%) scale(0);
+  font-size: 42px; font-weight: 900; color: #FFD700;
+  text-shadow: 0 0 20px rgba(255,215,0,0.8), 0 0 40px rgba(255,165,0,0.5), 0 4px 8px rgba(0,0,0,0.3);
+  font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+  white-space: nowrap; z-index: 5;
+  opacity: 0;
+}
+#celebScoreBurst.active {
+  animation: scoreBurst 3s ease-out forwards;
+}
+@keyframes scoreBurst {
+  0% { transform: translate(-50%, -50%) scale(0) rotate(-10deg); opacity: 0; }
+  15% { transform: translate(-50%, -50%) scale(1.3) rotate(3deg); opacity: 1; }
+  25% { transform: translate(-50%, -50%) scale(1.0) rotate(0deg); opacity: 1; }
+  50% { transform: translate(-50%, -50%) scale(1.05) rotate(0deg); opacity: 1; }
+  80% { transform: translate(-50%, -50%) scale(1.0) rotate(0deg); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(0.8) rotate(0deg); opacity: 0; }
+}
+
+#celebEmoji {
+  position: absolute; top: 45%; left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 20px; z-index: 5;
+  opacity: 0;
+}
+#celebEmoji.active {
+  animation: emojiFlyIn 2.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+@keyframes emojiFlyIn {
+  0% { transform: translate(-50%, 200px) scale(0.2); opacity: 0; font-size: 20px; }
+  40% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; font-size: 120px; }
+  60% { transform: translate(-50%, -50%) scale(0.95); opacity: 1; font-size: 120px; }
+  75% { transform: translate(-50%, -50%) scale(1.05); opacity: 1; font-size: 130px; }
+  100% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; font-size: 130px; }
+}
+
+#celebMessage {
+  position: absolute; top: 65%; left: 50%; transform: translate(-50%, -50%) scale(0.5);
+  font-size: 32px; font-weight: 900; color: white;
+  text-shadow: 0 0 15px rgba(255,255,255,0.6), 0 3px 6px rgba(0,0,0,0.4);
+  font-family: 'Comic Sans MS', 'Chalkboard SE', cursive;
+  white-space: nowrap; z-index: 5;
+  opacity: 0;
+}
+#celebMessage.active {
+  animation: messageReveal 1.5s ease-out forwards;
+}
+@keyframes messageReveal {
+  0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  50% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+}
+
+.celeb-sparkle {
+  position: absolute; border-radius: 50%;
+  pointer-events: none; z-index: 6;
+  animation: sparkleRadial 1.2s ease-out forwards;
+}
+@keyframes sparkleRadial {
+  0% { transform: translate(0, 0) scale(1); opacity: 1; }
+  100% { transform: translate(var(--sx), var(--sy)) scale(0); opacity: 0; }
+}
+#celebrationLayer.fade-out {
+  transition: opacity 1s ease-out;
+  opacity: 0;
+}
+
+#gardenCompleteCard {
+  background: white; border-radius: 30px;
+  padding: 32px 40px; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  animation: cardEnter 0.5s ease-out;
+  max-width: 420px; width: 92%;
+  z-index: 310;
+  position: relative;
+}
+@keyframes cardEnter {
+  0% { transform: scale(0.5) translateY(40px); opacity: 0; }
+  100% { transform: scale(1) translateY(0); opacity: 1; }
+}
+#gardenCompleteCard h2 { font-size: 24px; color: #2E7D32; margin-bottom: 10px; }
+#gardenCompleteCard p { font-size: 16px; color: #555; margin-bottom: 14px; }
+#newGardenBtn {
+  background: linear-gradient(135deg, #66BB6A, #43A047);
+  color: white; border: none; padding: 14px 36px;
+  font-size: 20px; font-family: inherit;
+  border-radius: 30px; cursor: pointer; font-weight: bold;
+  box-shadow: 0 4px 15px rgba(76,175,80,0.4);
+  transition: transform 0.2s;
+}
+#newGardenBtn:hover { transform: scale(1.06); }
+
+/* ===== RESET ===== */
+#resetBtn {
+  position: fixed; bottom: 10px; right: 10px;
+  background: rgba(0,0,0,0.2); color: rgba(255,255,255,0.6);
+  border: none; padding: 5px 10px; font-size: 11px;
+  font-family: inherit; border-radius: 8px; cursor: pointer; z-index: 50;
+}
+#resetBtn:hover { background: rgba(0,0,0,0.4); color: #fff; }
+
+@media (max-width: 768px) {
+  #characterContainer { width: 90px; right: 1%; bottom: 3%; }
+  .word-bubble { font-size: 26px; padding: 10px 22px; }
+  #plantProgress { font-size: 22px; padding: 8px 16px; min-width: 105px; }
+  #hearAgainBtn { width: 44px; height: 44px; font-size: 22px; }
+  #topBar { height: 58px; }
+  #gameArea { top: 58px; }
+  #gardenCount { font-size: 11px; padding: 3px 7px; }
+}
+</style>
+</head>
+<body>
+
+<div id="topBar">
+  <div id="plantProgress">&#x1F331; <span id="plantCount">0</span> / 16</div>
+  <div id="targetArea">
+    <button id="hearAgainBtn" title="Hear again">&#x1F50A;</button>
+  </div>
+  <div id="gardenCount">&#x1F3E1; Gardens: <span id="gardensCompleted">0</span></div>
+  <div id="scoreDisplay">&#x2B50; <span id="scoreCount">0</span></div>
+</div>
+
+<div id="gameArea">
+  <div id="skyZone"></div>
+  <div id="gardenZone">
+    <div id="plantGrid"></div>
+    <div id="characterContainer"></div>
+  </div>
+</div>
+
+<div id="celebrationOverlay">
+  <div id="celebrationLayer">
+    <div id="celebConfettiContainer"></div>
+    <div id="celebScoreBurst"></div>
+    <div id="celebEmoji"></div>
+    <div id="celebMessage"></div>
+  </div>
+  <div id="gardenCompleteCard" style="display:none;">
+    <h2>&#x1F338; Your Garden is Beautiful! &#x1F338;</h2>
+    <p>You planted all 16 plants!</p>
+    <button id="newGardenBtn">&#x1F331; Plant a New Garden</button>
+  </div>
+</div>
+
+<button id="resetBtn">Reset</button>
+
+<script>
+// ============================================================
+//  DATA
+// ============================================================
+const WORDS = [
+  'the','of','and','a','to','in','is','you','that','it',
+  'he','was','for','on','are','as','with','his','they','I',
+  'at','be','this','have','from','or','one','had','by','words',
+  'but','not','what','all','were','we','when','your','can','said',
+  'there','use','an','each','which','she','do','how','their','if',
+  'will','up','other','about','out','many','then','them','these','so',
+  'some','her','would','make','like','him','into','time','has','look',
+  'two','more','write','go','see','number','no','way','could','people',
+  'my','than','first','water','been','called','who','am','its','now',
+  'find','long','down','day','did','get','come','made','may','part'
+];
+
+const PRIORITY_WORDS = [
+  'or','other','about','out','then','them','these','so','her','would',
+  'time','more','write','number','no','way','could','people','than','first',
+  'water','called','who','now','find','long','come','made','part'
+];
+
+const BUBBLE_COLORS = [
+  'linear-gradient(135deg,#E53935,#B71C1C)',
+  'linear-gradient(135deg,#8E24AA,#6A1B9A)',
+  'linear-gradient(135deg,#1E88E5,#1565C0)',
+  'linear-gradient(135deg,#00897B,#00695C)',
+  'linear-gradient(135deg,#F4511E,#D84315)',
+  'linear-gradient(135deg,#3949AB,#283593)',
+  'linear-gradient(135deg,#00ACC1,#00838F)',
+  'linear-gradient(135deg,#7CB342,#558B2F)',
+  'linear-gradient(135deg,#D81B60,#AD1457)',
+  'linear-gradient(135deg,#6D4C41,#4E342E)',
+];
+
+const PLANT_TYPES = [
+  { name: 'Red Rose',    draw: drawRedRose },
+  { name: 'Pink Rose',   draw: drawPinkRose },
+  { name: 'Yellow Rose', draw: drawYellowRose },
+  { name: 'White Rose',  draw: drawWhiteRose },
+  { name: 'Purple Rose', draw: drawPurpleRose },
+  { name: 'Kale',        draw: drawKale },
+  { name: 'Narcissus',   draw: drawNarcissus },
+  { name: 'Candy Cane',  draw: drawCandyCane },
+  { name: 'Blue Bells',  draw: drawBlueBells },
+  { name: 'Sunflower',   draw: drawSunflower },
+  { name: 'Tulip',       draw: drawTulip },
+  { name: 'Lavender',    draw: drawLavender },
+  { name: 'Daisy',       draw: drawDaisy },
+  { name: 'Cactus',      draw: drawCactus },
+  { name: 'Mushroom',    draw: drawMushroom },
+  { name: 'Fern',        draw: drawFern },
+];
+
+const TOTAL_PLANTS = 16;
+const MASTERY_COUNT = 3;
+
+// Set to a photo filename (e.g. 'kid.png') to use a real photo for the character's face.
+// Place the photo in the same folder as index.html. Set to '' to use the drawn face.
+const PHOTO_PATH = 'kid.png';
+
+// ============================================================
+//  PLANT SVG FUNCTIONS
+// ============================================================
+function drawRose(petalColor, petalDark) {
+  return `<svg viewBox="0 0 80 110" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <line x1="40" y1="55" x2="40" y2="108" stroke="#2E7D32" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="30" cy="78" rx="10" ry="5" fill="#4CAF50" transform="rotate(-30 30 78)"/>
+    <ellipse cx="50" cy="88" rx="10" ry="5" fill="#4CAF50" transform="rotate(25 50 88)"/>
+    <line x1="40" y1="68" x2="36" y2="64" stroke="#2E7D32" stroke-width="1.5"/>
+    <line x1="40" y1="82" x2="44" y2="78" stroke="#2E7D32" stroke-width="1.5"/>
+    ${[0,60,120,180,240,300].map(a =>
+      `<ellipse cx="40" cy="36" rx="8" ry="14" fill="${petalColor}" transform="rotate(${a} 40 44)"/>`
+    ).join('')}
+    ${[30,90,150,210,270,330].map(a =>
+      `<ellipse cx="40" cy="38" rx="5" ry="10" fill="${petalDark}" transform="rotate(${a} 40 44)" opacity="0.7"/>`
+    ).join('')}
+    <circle cx="40" cy="44" r="6" fill="${petalDark}"/>
+    <circle cx="40" cy="44" r="3" fill="${petalColor}"/>
+  </svg>`;
+}
+
+function drawRedRose() { return drawRose('#E53935', '#B71C1C'); }
+function drawPinkRose() { return drawRose('#F48FB1', '#EC407A'); }
+function drawYellowRose() { return drawRose('#FDD835', '#F9A825'); }
+function drawWhiteRose() { return drawRose('#FAFAFA', '#E0E0E0'); }
+function drawPurpleRose() { return drawRose('#AB47BC', '#7B1FA2'); }
+
+function drawKale() {
+  return `<svg viewBox="0 0 80 110" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <rect x="37" y="85" width="6" height="23" rx="3" fill="#558B2F"/>
+    <ellipse cx="40" cy="65" rx="28" ry="25" fill="#7CB342"/>
+    <ellipse cx="30" cy="55" rx="15" ry="12" fill="#8BC34A"/>
+    <ellipse cx="50" cy="55" rx="15" ry="12" fill="#8BC34A"/>
+    <ellipse cx="40" cy="48" rx="12" ry="10" fill="#9CCC65"/>
+    <circle cx="18" cy="70" r="6" fill="#7CB342"/>
+    <circle cx="62" cy="70" r="6" fill="#7CB342"/>
+    <circle cx="22" cy="55" r="5" fill="#8BC34A"/>
+    <circle cx="58" cy="55" r="5" fill="#8BC34A"/>
+    <circle cx="30" cy="45" r="4" fill="#9CCC65"/>
+    <circle cx="50" cy="45" r="4" fill="#9CCC65"/>
+    <circle cx="40" cy="40" r="5" fill="#AED581"/>
+    <line x1="40" y1="85" x2="40" y2="50" stroke="#558B2F" stroke-width="1.5" opacity="0.5"/>
+    <line x1="40" y1="65" x2="25" y2="55" stroke="#558B2F" stroke-width="1" opacity="0.4"/>
+    <line x1="40" y1="65" x2="55" y2="55" stroke="#558B2F" stroke-width="1" opacity="0.4"/>
+  </svg>`;
+}
+
+function drawNarcissus() {
+  return `<svg viewBox="0 0 80 110" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <line x1="40" y1="50" x2="40" y2="108" stroke="#558B2F" stroke-width="3" stroke-linecap="round"/>
+    <path d="M38 108 Q25 80 30 60" fill="none" stroke="#689F38" stroke-width="3" stroke-linecap="round"/>
+    <path d="M42 108 Q55 80 50 65" fill="none" stroke="#689F38" stroke-width="3" stroke-linecap="round"/>
+    ${[0,60,120,180,240,300].map(a =>
+      `<ellipse cx="40" cy="30" rx="7" ry="15" fill="#FDD835" transform="rotate(${a} 40 40)"/>`
+    ).join('')}
+    <circle cx="40" cy="40" r="10" fill="#FF9800"/>
+    <circle cx="40" cy="40" r="7" fill="#FFB74D"/>
+    <circle cx="40" cy="40" r="4" fill="#FFE082"/>
+  </svg>`;
+}
+
+function drawCandyCane() {
+  return `<svg viewBox="0 0 80 110" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <rect x="36" y="30" width="8" height="78" rx="4" fill="white"/>
+    <rect x="36" y="35" width="8" height="8" fill="#E53935"/>
+    <rect x="36" y="51" width="8" height="8" fill="#E53935"/>
+    <rect x="36" y="67" width="8" height="8" fill="#E53935"/>
+    <rect x="36" y="83" width="8" height="8" fill="#E53935"/>
+    <rect x="36" y="99" width="8" height="8" rx="4" fill="#E53935"/>
+    <path d="M44 30 Q44 12 56 12 Q68 12 68 24" fill="none" stroke="white" stroke-width="8" stroke-linecap="round"/>
+    <path d="M44 30 Q44 16 52 13" fill="none" stroke="#E53935" stroke-width="8" stroke-linecap="round" stroke-dasharray="8 8" stroke-dashoffset="2"/>
+  </svg>`;
+}
+
+function drawBlueBells() {
+  return `<svg viewBox="0 0 80 110" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <path d="M40 108 Q40 60 40 45 Q40 30 55 20" fill="none" stroke="#2E7D32" stroke-width="2.5" stroke-linecap="round"/>
+    <path d="M38 100 Q20 75 25 60" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
+    <path d="M52 22 Q48 18 44 22 L42 30 Q48 34 54 30 Z" fill="#42A5F5"/>
+    <ellipse cx="48" cy="30" rx="6" ry="2" fill="#1E88E5"/>
+    <path d="M56 30 Q52 26 48 30 L46 38 Q52 42 58 38 Z" fill="#64B5F6"/>
+    <ellipse cx="52" cy="38" rx="6" ry="2" fill="#42A5F5"/>
+    <path d="M52 38 Q48 34 44 38 L42 46 Q48 50 54 46 Z" fill="#42A5F5"/>
+    <ellipse cx="48" cy="46" rx="6" ry="2" fill="#1E88E5"/>
+    <path d="M48 46 Q44 42 40 46 L38 54 Q44 58 50 54 Z" fill="#90CAF9"/>
+    <ellipse cx="44" cy="54" rx="6" ry="2" fill="#64B5F6"/>
+    <line x1="48" y1="30" x2="48" y2="34" stroke="#FDD835" stroke-width="1"/>
+    <line x1="52" y1="38" x2="52" y2="42" stroke="#FDD835" stroke-width="1"/>
+    <line x1="48" y1="46" x2="48" y2="50" stroke="#FDD835" stroke-width="1"/>
+    <line x1="44" y1="54" x2="44" y2="58" stroke="#FDD835" stroke-width="1"/>
+  </svg>`;
+}
+
+function drawSunflower() {
+  return `<svg viewBox="0 0 80 120" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <line x1="40" y1="50" x2="40" y2="118" stroke="#558B2F" stroke-width="5" stroke-linecap="round"/>
+    <ellipse cx="24" cy="80" rx="16" ry="8" fill="#689F38" transform="rotate(-35 24 80)"/>
+    <ellipse cx="56" cy="90" rx="16" ry="8" fill="#689F38" transform="rotate(30 56 90)"/>
+    ${Array.from({length:14}, (_,i) => {
+      const a = (i/14)*360;
+      return `<ellipse cx="40" cy="22" rx="6" ry="16" fill="#FDD835" transform="rotate(${a} 40 38)"/>`;
+    }).join('')}
+    ${Array.from({length:10}, (_,i) => {
+      const a = (i/10)*360 + 18;
+      return `<ellipse cx="40" cy="28" rx="4" ry="10" fill="#FFEE58" transform="rotate(${a} 40 38)"/>`;
+    }).join('')}
+    <circle cx="40" cy="38" r="14" fill="#5D4037"/>
+    <circle cx="40" cy="38" r="10" fill="#795548"/>
+    ${[{x:36,y:34},{x:40,y:33},{x:44,y:35},{x:37,y:39},{x:43,y:39},{x:40,y:42}].map(p =>
+      `<circle cx="${p.x}" cy="${p.y}" r="1.5" fill="#4E342E"/>`
+    ).join('')}
+  </svg>`;
+}
+
+function drawTulip() {
+  return `<svg viewBox="0 0 80 110" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <line x1="40" y1="55" x2="40" y2="108" stroke="#2E7D32" stroke-width="3" stroke-linecap="round"/>
+    <path d="M40 95 Q25 75 28 60" fill="none" stroke="#4CAF50" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M40 90 Q55 70 52 58" fill="none" stroke="#4CAF50" stroke-width="3" stroke-linecap="round"/>
+    <path d="M24 55 Q26 30 40 22 Q54 30 56 55 Q48 58 40 55 Q32 58 24 55 Z" fill="#E53935"/>
+    <path d="M32 52 Q34 35 40 28" fill="none" stroke="#EF5350" stroke-width="1.5"/>
+    <path d="M48 52 Q46 35 40 28" fill="none" stroke="#EF5350" stroke-width="1.5"/>
+    <path d="M30 48 Q32 34 38 26" fill="none" stroke="#FF8A80" stroke-width="1" opacity="0.5"/>
+  </svg>`;
+}
+
+function drawLavender() {
+  return `<svg viewBox="0 0 80 110" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <line x1="30" y1="108" x2="30" y2="30" stroke="#689F38" stroke-width="2" stroke-linecap="round"/>
+    <line x1="40" y1="108" x2="40" y2="25" stroke="#689F38" stroke-width="2" stroke-linecap="round"/>
+    <line x1="50" y1="108" x2="50" y2="32" stroke="#689F38" stroke-width="2" stroke-linecap="round"/>
+    ${[30,36,42,48,54].map(y =>
+      `<ellipse cx="30" cy="${y}" rx="5" ry="3.5" fill="#AB47BC"/>`
+    ).join('')}
+    ${[25,31,37,43,49,55].map(y =>
+      `<ellipse cx="40" cy="${y}" rx="5" ry="3.5" fill="#CE93D8"/>`
+    ).join('')}
+    ${[32,38,44,50,56].map(y =>
+      `<ellipse cx="50" cy="${y}" rx="5" ry="3.5" fill="#BA68C8"/>`
+    ).join('')}
+    <ellipse cx="25" cy="95" rx="8" ry="4" fill="#689F38" transform="rotate(-20 25 95)"/>
+    <ellipse cx="55" cy="95" rx="8" ry="4" fill="#689F38" transform="rotate(20 55 95)"/>
+  </svg>`;
+}
+
+function drawDaisy() {
+  return `<svg viewBox="0 0 80 110" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <line x1="40" y1="55" x2="40" y2="108" stroke="#2E7D32" stroke-width="3" stroke-linecap="round"/>
+    <ellipse cx="30" cy="82" rx="10" ry="5" fill="#66BB6A" transform="rotate(-25 30 82)"/>
+    <ellipse cx="50" cy="90" rx="10" ry="5" fill="#66BB6A" transform="rotate(30 50 90)"/>
+    ${Array.from({length:10}, (_,i) => {
+      const a = (i/10)*360;
+      return `<ellipse cx="40" cy="34" rx="5" ry="13" fill="white" transform="rotate(${a} 40 44)" stroke="#E0E0E0" stroke-width="0.5"/>`;
+    }).join('')}
+    <circle cx="40" cy="44" r="9" fill="#FDD835"/>
+    <circle cx="40" cy="44" r="6" fill="#FFB300"/>
+    <circle cx="38" cy="42" r="1.5" fill="#F57F17" opacity="0.5"/>
+    <circle cx="42" cy="43" r="1.5" fill="#F57F17" opacity="0.5"/>
+    <circle cx="40" cy="46" r="1.5" fill="#F57F17" opacity="0.5"/>
+  </svg>`;
+}
+
+function drawCactus() {
+  return `<svg viewBox="0 0 80 110" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <ellipse cx="40" cy="75" rx="16" ry="28" fill="#4CAF50"/>
+    <line x1="34" y1="50" x2="34" y2="100" stroke="#66BB6A" stroke-width="1.5" opacity="0.6"/>
+    <line x1="40" y1="48" x2="40" y2="102" stroke="#66BB6A" stroke-width="1.5" opacity="0.6"/>
+    <line x1="46" y1="50" x2="46" y2="100" stroke="#66BB6A" stroke-width="1.5" opacity="0.6"/>
+    <ellipse cx="22" cy="72" rx="8" ry="5" fill="#4CAF50"/>
+    <ellipse cx="22" cy="62" rx="5" ry="8" fill="#4CAF50"/>
+    <ellipse cx="58" cy="78" rx="8" ry="5" fill="#4CAF50"/>
+    <ellipse cx="58" cy="68" rx="5" ry="8" fill="#4CAF50"/>
+    ${[0,72,144,216,288].map(a =>
+      `<ellipse cx="40" cy="42" rx="4" ry="8" fill="#F48FB1" transform="rotate(${a} 40 48)"/>`
+    ).join('')}
+    <circle cx="40" cy="48" r="5" fill="#FCE4EC"/>
+    <circle cx="40" cy="48" r="3" fill="#F06292"/>
+    ${[{x:36,y:58},{x:44,y:65},{x:38,y:80},{x:42,y:92},{x:46,y:72},{x:34,y:70}].map(p =>
+      `<circle cx="${p.x}" cy="${p.y}" r="0.8" fill="#1B5E20"/>`
+    ).join('')}
+  </svg>`;
+}
+
+function drawMushroom() {
+  return `<svg viewBox="0 0 80 110" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <rect x="32" y="60" width="16" height="48" rx="6" fill="#FAFAFA"/>
+    <rect x="34" y="60" width="4" height="45" rx="2" fill="#EEEEEE" opacity="0.5"/>
+    <path d="M24 108 Q28 98 30 108" fill="#4CAF50"/>
+    <path d="M50 108 Q52 96 54 108" fill="#4CAF50"/>
+    <ellipse cx="40" cy="62" rx="32" ry="22" fill="#E53935"/>
+    <ellipse cx="40" cy="64" rx="30" ry="6" fill="#D32F2F"/>
+    <circle cx="25" cy="52" r="5" fill="white" opacity="0.9"/>
+    <circle cx="45" cy="46" r="6" fill="white" opacity="0.9"/>
+    <circle cx="55" cy="56" r="4" fill="white" opacity="0.9"/>
+    <circle cx="33" cy="60" r="3.5" fill="white" opacity="0.8"/>
+    <circle cx="52" cy="48" r="3" fill="white" opacity="0.7"/>
+    <ellipse cx="30" cy="48" rx="6" ry="3" fill="white" opacity="0.25" transform="rotate(-20 30 48)"/>
+  </svg>`;
+}
+
+function drawFern() {
+  return `<svg viewBox="0 0 80 110" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+    <path d="M40 108 Q40 50 38 20" fill="none" stroke="#2E7D32" stroke-width="2"/>
+    ${[{y:30,s:12},{y:40,s:14},{y:50,s:16},{y:60,s:18},{y:70,s:16},{y:80,s:12},{y:90,s:8}].map(l =>
+      `<path d="M40 ${l.y} Q${40-l.s} ${l.y-5} ${40-l.s-4} ${l.y-2}" fill="none" stroke="#4CAF50" stroke-width="2" stroke-linecap="round"/>`
+    ).join('')}
+    ${[{y:25,s:10},{y:35,s:13},{y:45,s:15},{y:55,s:17},{y:65,s:16},{y:75,s:13},{y:85,s:9}].map(l =>
+      `<path d="M40 ${l.y} Q${40+l.s} ${l.y-5} ${40+l.s+4} ${l.y-2}" fill="none" stroke="#66BB6A" stroke-width="2" stroke-linecap="round"/>`
+    ).join('')}
+    <path d="M38 108 Q15 60 18 25" fill="none" stroke="#388E3C" stroke-width="1.5"/>
+    ${[{y:35,x:17},{y:45,x:16},{y:55,x:18},{y:65,x:20},{y:75,x:23}].map(l =>
+      `<path d="M${l.x} ${l.y} Q${l.x-8} ${l.y-4} ${l.x-10} ${l.y-1}" fill="none" stroke="#4CAF50" stroke-width="1.5" stroke-linecap="round"/>`
+    ).join('')}
+    <path d="M42 108 Q65 60 62 28" fill="none" stroke="#388E3C" stroke-width="1.5"/>
+    ${[{y:38,x:63},{y:48,x:64},{y:58,x:62},{y:68,x:60},{y:78,x:56}].map(l =>
+      `<path d="M${l.x} ${l.y} Q${l.x+8} ${l.y-4} ${l.x+10} ${l.y-1}" fill="none" stroke="#66BB6A" stroke-width="1.5" stroke-linecap="round"/>`
+    ).join('')}
+  </svg>`;
+}
+
+// ============================================================
+//  WATERING CHARACTER SVG
+// ============================================================
+function buildCharacterSVG() {
+  // Face skin (goes BEFORE hair so hair overlaps the forehead)
+  const faceSkin = `<ellipse cx="70" cy="62" rx="32" ry="36" fill="#FFE0BD"/>`;
+
+  // Photo: clipped image on top of skin, under hair
+  const photoLayer = PHOTO_PATH ? `
+    <defs>
+      <clipPath id="faceClip">
+        <ellipse cx="70" cy="64" rx="29" ry="33"/>
+      </clipPath>
+    </defs>
+    <image href="${PHOTO_PATH}" x="38" y="28" width="64" height="74"
+           clip-path="url(#faceClip)" preserveAspectRatio="xMidYMid slice"/>` : '';
+
+  // Drawn facial features (go AFTER hair so they appear on top)
+  const drawnFeatures = !PHOTO_PATH ? `
+    <ellipse cx="58" cy="62" rx="8" ry="9.5" fill="white"/>
+    <ellipse cx="82" cy="62" rx="8" ry="9.5" fill="white"/>
+    <ellipse cx="59" cy="63" rx="6" ry="7" fill="#4FC3F7"/>
+    <ellipse cx="83" cy="63" rx="6" ry="7" fill="#4FC3F7"/>
+    <circle cx="60" cy="64" r="4" fill="#1A237E"/>
+    <circle cx="84" cy="64" r="4" fill="#1A237E"/>
+    <circle cx="62" cy="60" r="2.5" fill="white"/>
+    <circle cx="86" cy="60" r="2.5" fill="white"/>
+    <circle cx="57" cy="67" r="1.5" fill="white"/>
+    <circle cx="81" cy="67" r="1.5" fill="white"/>
+    <path d="M52 52 Q58 48 64 52" fill="none" stroke="#5D4037" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M76 52 Q82 48 88 52" fill="none" stroke="#5D4037" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M68 72 Q70 76 72 72" fill="none" stroke="#E8A87C" stroke-width="1.2" stroke-linecap="round"/>
+    <path d="M58 80 Q70 92 82 80" fill="#FF8A80" stroke="#E57373" stroke-width="1" stroke-linecap="round"/>
+    <ellipse cx="70" cy="84" rx="4" ry="2.5" fill="#EF9A9A"/>
+    <ellipse cx="46" cy="72" rx="7" ry="4" fill="#FFAB91" opacity="0.4"/>
+    <ellipse cx="94" cy="72" rx="7" ry="4" fill="#FFAB91" opacity="0.4"/>
+    <circle cx="50" cy="70" r="1" fill="#DEB887" opacity="0.4"/>
+    <circle cx="53" cy="73" r="1" fill="#DEB887" opacity="0.4"/>
+    <circle cx="87" cy="70" r="1" fill="#DEB887" opacity="0.4"/>
+    <circle cx="90" cy="73" r="1" fill="#DEB887" opacity="0.4"/>
+    <ellipse cx="58" cy="62" rx="9" ry="10.5" fill="#FFE0BD" class="blink-overlay"/>
+    <ellipse cx="82" cy="62" rx="9" ry="10.5" fill="#FFE0BD" class="blink-overlay"/>` : '';
+
+  return `<svg viewBox="0 0 160 300" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <ellipse cx="70" cy="290" rx="32" ry="6" fill="rgba(0,0,0,0.1)"/>
+    <rect x="54" y="220" width="10" height="45" rx="5" fill="#FFE0BD"/>
+    <rect x="76" y="220" width="10" height="45" rx="5" fill="#FFE0BD"/>
+    <ellipse cx="59" cy="268" rx="13" ry="6" fill="#2E7D32"/>
+    <ellipse cx="81" cy="268" rx="13" ry="6" fill="#2E7D32"/>
+    <rect x="48" y="255" width="22" height="15" rx="4" fill="#388E3C"/>
+    <rect x="70" y="255" width="22" height="15" rx="4" fill="#388E3C"/>
+    <path d="M48 110 Q70 104 92 110 L102 224 Q70 234 38 224 Z" fill="#43A047"/>
+    <path d="M52 110 Q60 106 68 110" fill="white" opacity="0.3"/>
+    <path d="M72 110 Q80 106 88 110" fill="white" opacity="0.3"/>
+    <path d="M52 130 Q70 126 88 130 L92 200 Q70 210 48 200 Z" fill="#C8E6C9" opacity="0.7"/>
+    <rect x="60" y="130" width="20" height="12" rx="3" fill="#A5D6A7"/>
+    <rect x="63" y="96" width="14" height="16" rx="7" fill="#FFE0BD"/>
+    <!-- face skin (under hair) -->
+    ${faceSkin}
+    ${photoLayer}
+    <!-- hair (frames the face/photo) -->
+    <ellipse cx="70" cy="48" rx="36" ry="32" fill="#795548"/>
+    <path d="M36 50 Q30 90 34 140 Q36 142 38 138 Q37 95 40 58 Z" fill="#795548"/>
+    <path d="M104 50 Q110 90 106 140 Q104 142 102 138 Q103 95 100 58 Z" fill="#795548"/>
+    <circle cx="32" cy="70" r="12" fill="#795548"/>
+    <circle cx="108" cy="70" r="12" fill="#795548"/>
+    <g transform="translate(70,30)">
+      <path d="M0 0 Q-14 -10 -8 0 Q-14 10 0 0" fill="#66BB6A"/>
+      <path d="M0 0 Q14 -10 8 0 Q14 10 0 0" fill="#66BB6A"/>
+      <circle cx="0" cy="0" r="3" fill="#2E7D32"/>
+    </g>
+    <!-- facial features (on top of hair, only for drawn face) -->
+    ${drawnFeatures}
+    <rect x="30" y="115" width="10" height="35" rx="5" fill="#FFE0BD" transform="rotate(-10 35 115)"/>
+    <circle cx="28" cy="152" r="6" fill="#81C784"/>
+    <rect x="100" y="115" width="10" height="35" rx="5" fill="#FFE0BD" transform="rotate(15 105 115)"/>
+    <circle cx="112" cy="150" r="6" fill="#81C784"/>
+    <g transform="translate(108, 145)">
+      <rect x="0" y="0" width="28" height="20" rx="4" fill="#78909C"/>
+      <rect x="0" y="0" width="28" height="4" rx="2" fill="#90A4AE"/>
+      <path d="M4 0 Q4 -10 14 -10 Q24 -10 24 0" fill="none" stroke="#607D8B" stroke-width="3" stroke-linecap="round"/>
+      <line x1="28" y1="8" x2="42" y2="2" stroke="#607D8B" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="44" cy="0" r="5" fill="#90A4AE"/>
+      <circle cx="42" cy="-2" r="1" fill="#607D8B"/>
+      <circle cx="44" cy="-2" r="1" fill="#607D8B"/>
+      <circle cx="46" cy="-2" r="1" fill="#607D8B"/>
+      <circle cx="43" cy="1" r="1" fill="#607D8B"/>
+      <circle cx="45" cy="1" r="1" fill="#607D8B"/>
+    </g>
+  </svg>`;
+}
+
+// ============================================================
+//  STATE
+// ============================================================
+const STORAGE_KEY = 'sightWordGarden_v1';
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function defaultState() {
+  return {
+    gardenPlants: [],
+    plantOrder: shuffle(Array.from({length: TOTAL_PLANTS}, (_, i) => i)),
+    gridOffsets: Array.from({length: TOTAL_PLANTS}, () => ({
+      dx: Math.random() * 6 - 3,
+      dy: Math.random() * 4 - 2,
+      rot: Math.random() * 6 - 3
+    })),
+    totalCorrect: 0,
+    wordClicks: {},
+    gardenComplete: false,
+    gardensCompleted: 0
+  };
+}
+
+function loadState() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if (s && Array.isArray(s.gardenPlants)) {
+      if (!s.wordClicks) s.wordClicks = {};
+      if (!Array.isArray(s.plantOrder) || s.plantOrder.length !== TOTAL_PLANTS) {
+        s.plantOrder = shuffle(Array.from({length: TOTAL_PLANTS}, (_, i) => i));
+        s.gardenPlants = [];
+        s.gardenComplete = false;
+      }
+      if (!Array.isArray(s.gridOffsets) || s.gridOffsets.length !== TOTAL_PLANTS) {
+        s.gridOffsets = Array.from({length: TOTAL_PLANTS}, () => ({dx:0,dy:0,rot:0}));
+      }
+      if (s.gardensCompleted === undefined) s.gardensCompleted = 0;
+      return s;
+    }
+  } catch(e) {}
+  return defaultState();
+}
+
+function saveState() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+let state = loadState();
+let gamePaused = false;
+let currentTarget = null;
+let roundBubbles = [];
+let roundActive = false;
+let frameId = null;
+
+// ============================================================
+//  SPEECH
+// ============================================================
+function speakWord(word) {
+  try {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(word);
+    u.rate = 0.72; u.pitch = 1.2; u.volume = 1;
+    const voices = speechSynthesis.getVoices();
+    const preferred =
+         voices.find(v => v.name === 'Samantha' && v.lang === 'en-US')
+      || voices.find(v => v.name.includes('Samantha'))
+      || voices.find(v => v.lang === 'en-US' && !/Alex|Daniel|Fred|Tom|Aaron|Ralph/i.test(v.name))
+      || voices.find(v => v.lang === 'en-US');
+    if (preferred) u.voice = preferred;
+    speechSynthesis.speak(u);
+  } catch(e) {}
+}
+if (speechSynthesis.onvoiceschanged !== undefined)
+  speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+speechSynthesis.getVoices();
+
+// ============================================================
+//  SOUNDS
+// ============================================================
+function playPopSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(500, now);
+    osc.frequency.linearRampToValueAtTime(1200, now + 0.1);
+    gain.gain.setValueAtTime(0.13, now);
+    gain.gain.linearRampToValueAtTime(0, now + 0.15);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.2);
+    setTimeout(() => ctx.close(), 300);
+  } catch(e) {}
+}
+
+function playPlantSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    [800,1000,1200].forEach((f,i) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = 'triangle'; osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, now+i*0.1);
+      gain.gain.linearRampToValueAtTime(0.1, now+i*0.1+0.03);
+      gain.gain.linearRampToValueAtTime(0, now+i*0.1+0.2);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now+i*0.1); osc.stop(now+i*0.1+0.25);
+    });
+    setTimeout(() => ctx.close(), 600);
+  } catch(e) {}
+}
+
+function playWrongSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator(), gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(330, now);
+    osc.frequency.linearRampToValueAtTime(220, now + 0.22);
+    gain.gain.setValueAtTime(0.09, now);
+    gain.gain.linearRampToValueAtTime(0, now + 0.25);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(now); osc.stop(now + 0.3);
+    setTimeout(() => ctx.close(), 400);
+  } catch(e) {}
+}
+
+function playFanfare() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    [523,659,784,1047].forEach((f,i) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = 'triangle'; osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, now+i*0.15);
+      gain.gain.linearRampToValueAtTime(0.12, now+i*0.15+0.03);
+      gain.gain.linearRampToValueAtTime(i===3?0.1:0, now+i*0.15+(i===3?0.5:0.14));
+      if (i===3) gain.gain.linearRampToValueAtTime(0, now+i*0.15+0.6);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now+i*0.15); osc.stop(now+i*0.15+0.7);
+    });
+    setTimeout(() => ctx.close(), 1500);
+  } catch(e) {}
+}
+
+function playLongFanfare() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const now = ctx.currentTime;
+    [523, 659, 784, 1047].forEach((f, i) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = 'triangle'; osc.frequency.value = f;
+      gain.gain.setValueAtTime(0, now + i * 0.2);
+      gain.gain.linearRampToValueAtTime(0.14, now + i * 0.2 + 0.04);
+      gain.gain.linearRampToValueAtTime(i === 3 ? 0.12 : 0.02, now + i * 0.2 + (i === 3 ? 0.8 : 0.18));
+      if (i === 3) gain.gain.linearRampToValueAtTime(0, now + i * 0.2 + 1.2);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(now + i * 0.2); osc.stop(now + i * 0.2 + 1.3);
+    });
+    [523, 659, 784].forEach((f) => {
+      const osc = ctx.createOscillator(), gain = ctx.createGain();
+      osc.type = 'sine'; osc.frequency.value = f;
+      const start = now + 1.0;
+      gain.gain.setValueAtTime(0, start);
+      gain.gain.linearRampToValueAtTime(0.06, start + 0.1);
+      gain.gain.linearRampToValueAtTime(0.05, start + 1.5);
+      gain.gain.linearRampToValueAtTime(0, start + 2.5);
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.start(start); osc.stop(start + 2.6);
+    });
+    const shimmer = ctx.createOscillator(), sGain = ctx.createGain();
+    shimmer.type = 'sine'; shimmer.frequency.value = 2093;
+    sGain.gain.setValueAtTime(0, now + 0.8);
+    sGain.gain.linearRampToValueAtTime(0.03, now + 1.0);
+    sGain.gain.linearRampToValueAtTime(0, now + 3.0);
+    shimmer.connect(sGain); sGain.connect(ctx.destination);
+    shimmer.start(now + 0.8); shimmer.stop(now + 3.1);
+    setTimeout(() => ctx.close(), 4000);
+  } catch(e) {}
+}
+
+// ============================================================
+//  WORD SELECTION & DISTRACTORS
+// ============================================================
+function pickTarget() {
+  const pool = [];
+  WORDS.forEach(word => {
+    const correct = state.wordClicks[word] || 0;
+    const mastered = correct >= MASTERY_COUNT;
+    const isPriority = PRIORITY_WORDS.includes(word);
+    let weight;
+    if (mastered) weight = 1;
+    else if (isPriority) weight = Math.max(2, 7 - correct);
+    else weight = Math.max(1, 4 - correct);
+    for (let i = 0; i < weight; i++) pool.push(word);
+  });
+  let word, attempts = 0;
+  do {
+    word = pool[Math.floor(Math.random() * pool.length)];
+    attempts++;
+  } while (word === currentTarget && attempts < 40);
+  return word;
+}
+
+function findDistractors(target, count) {
+  const candidates = WORDS.filter(w => w !== target);
+  const scored = candidates.map(w => {
+    let score = 0;
+    if (w[0] === target[0]) score += 4;
+    if (w[w.length - 1] === target[target.length - 1]) score += 2;
+    const lenDiff = Math.abs(w.length - target.length);
+    if (lenDiff === 0) score += 3;
+    else if (lenDiff === 1) score += 2;
+    else if (lenDiff === 2) score += 1;
+    if (w.length >= 2 && target.length >= 2 && w.slice(-2) === target.slice(-2)) score += 3;
+    const tSet = new Set(target);
+    [...new Set(w)].forEach(c => { if (tSet.has(c)) score += 0.5; });
+    score += Math.random() * 3;
+    return { word: w, score };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, count).map(s => s.word);
+}
+
+// ============================================================
+//  GARDEN RENDERING
+// ============================================================
+function renderGarden() {
+  const grid = document.getElementById('plantGrid');
+  grid.innerHTML = '';
+
+  for (let i = 0; i < TOTAL_PLANTS; i++) {
+    const slot = document.createElement('div');
+    slot.className = 'plant-slot';
+    slot.id = 'slot-' + i;
+
+    const off = state.gridOffsets[i];
+    slot.style.transform = `translate(${off.dx}px, ${off.dy}px) rotate(${off.rot}deg)`;
+
+    if (state.gardenPlants.includes(i)) {
+      const plantIdx = state.plantOrder[i];
+      const plant = PLANT_TYPES[plantIdx];
+      const div = document.createElement('div');
+      div.className = 'plant-svg';
+      div.style.width = '90%';
+      div.style.maxHeight = '100%';
+      div.style.animation = 'none';
+      div.innerHTML = plant.draw();
+      slot.appendChild(div);
+    } else {
+      const mound = document.createElement('div');
+      mound.style.cssText = 'width:30px;height:10px;background:radial-gradient(ellipse,#5D4037,transparent);border-radius:50%;opacity:0.3;margin-bottom:2px;';
+      slot.appendChild(mound);
+    }
+
+    grid.appendChild(slot);
+  }
+}
+
+function renderCharacter() {
+  document.getElementById('characterContainer').innerHTML = buildCharacterSVG();
+}
+
+function renderFence() {
+  const garden = document.getElementById('gardenZone');
+
+  const topRail = document.createElement('div');
+  topRail.style.cssText = 'position:absolute;top:8%;left:5%;right:20%;height:5px;background:#A1887F;border-radius:3px;z-index:3;';
+  garden.appendChild(topRail);
+
+  const bottomRail = document.createElement('div');
+  bottomRail.style.cssText = 'position:absolute;top:20%;left:5%;right:20%;height:5px;background:#A1887F;border-radius:3px;z-index:3;';
+  garden.appendChild(bottomRail);
+
+  const postCount = 6;
+  for (let i = 0; i < postCount; i++) {
+    const leftPct = 5 + (i / (postCount - 1)) * 73;
+    const post = document.createElement('div');
+    post.style.cssText = `position:absolute;top:2%;left:${leftPct}%;width:7px;height:22%;background:linear-gradient(90deg,#8D6E63,#A1887F,#8D6E63);border-radius:2px;z-index:3;`;
+    garden.appendChild(post);
+
+    const cap = document.createElement('div');
+    cap.style.cssText = `position:absolute;top:0%;left:calc(${leftPct}% - 2px);width:12px;height:8px;background:#8D6E63;clip-path:polygon(50% 0%, 0% 100%, 100% 100%);z-index:4;`;
+    garden.appendChild(cap);
+  }
+}
+
+// ============================================================
+//  ROUND MANAGEMENT
+// ============================================================
+function startNewRound() {
+  if (state.gardenComplete) return;
+  clearRoundBubbles();
+  currentTarget = pickTarget();
+
+  setTimeout(() => speakWord(currentTarget), 200);
+
+  const distractors = findDistractors(currentTarget, 3);
+  const bubbleWords = shuffle([currentTarget, ...distractors]);
+
+  const skyZone = document.getElementById('skyZone');
+  const areaW = skyZone.clientWidth;
+  const areaH = skyZone.clientHeight;
+  const count = bubbleWords.length;
+  const ySpacing = Math.min(100, (areaH - 100) / count);
+  const yStart = (areaH - (count - 1) * ySpacing) / 2;
+
+  bubbleWords.forEach((word, i) => {
+    setTimeout(() => {
+      if (!roundActive) return;
+      const startX = areaW + 40 + i * 100;
+      const startY = yStart + i * ySpacing + (Math.random() * 25 - 12);
+      spawnBubble(word, word === currentTarget, startX, startY);
+    }, i * 350);
+  });
+
+  roundActive = true;
+}
+
+function clearRoundBubbles() {
+  roundBubbles.forEach(b => { if (b.el.parentNode) b.el.remove(); });
+  roundBubbles = [];
+}
+
+function spawnBubble(word, isTarget, startX, startY) {
+  const el = document.createElement('div');
+  el.className = 'word-bubble';
+  el.textContent = word;
+
+  const colorIdx = Math.floor(Math.random() * BUBBLE_COLORS.length);
+  el.style.background = BUBBLE_COLORS[colorIdx];
+
+  const speed = 0.91 + Math.random() * 0.64;
+
+  const bubbleObj = {
+    el, word, isTarget,
+    bg: BUBBLE_COLORS[colorIdx],
+    x: startX, y: startY,
+    vx: -speed, vy: 0,
+    wobbleAmp: 0.25 + Math.random() * 0.35,
+    wobbleFreq: 0.0012 + Math.random() * 0.0012,
+    wobblePhase: Math.random() * Math.PI * 2,
+    clicking: false
+  };
+
+  el.style.transform = `translate(${startX}px, ${startY}px)`;
+  el.style.opacity = '0';
+  requestAnimationFrame(() => {
+    el.style.transition = 'opacity 0.35s';
+    el.style.opacity = '1';
+  });
+
+  el.addEventListener('click', (e) => { e.stopPropagation(); handleBubbleClick(bubbleObj); });
+  el.addEventListener('touchend', (e) => { e.preventDefault(); });
+
+  document.getElementById('skyZone').appendChild(el);
+  roundBubbles.push(bubbleObj);
+}
+
+// ============================================================
+//  BUBBLE MOVEMENT
+// ============================================================
+function updateBubbles() {
+  if (!roundActive) return;
+  const now = Date.now();
+  let targetGone = false;
+
+  for (let i = roundBubbles.length - 1; i >= 0; i--) {
+    const b = roundBubbles[i];
+    if (!b.el.parentNode) { roundBubbles.splice(i, 1); continue; }
+    if (b.clicking) continue;
+
+    b.x += b.vx;
+    const wobble = Math.sin(b.wobblePhase + now * b.wobbleFreq) * b.wobbleAmp;
+    b.y += wobble;
+    b.el.style.transform = `translate(${b.x}px, ${b.y}px)`;
+
+    if (b.x < -220) {
+      if (b.isTarget) targetGone = true;
+      b.el.remove();
+      roundBubbles.splice(i, 1);
+    }
+  }
+
+  if (targetGone && roundActive) {
+    roundActive = false;
+    setTimeout(() => {
+      clearRoundBubbles();
+      respawnSameTarget();
+    }, 600);
+  }
+}
+
+function respawnSameTarget() {
+  speakWord(currentTarget);
+
+  const distractors = findDistractors(currentTarget, 3);
+  const bubbleWords = shuffle([currentTarget, ...distractors]);
+  const skyZone = document.getElementById('skyZone');
+  const areaW = skyZone.clientWidth;
+  const areaH = skyZone.clientHeight;
+  const count = bubbleWords.length;
+  const ySpacing = Math.min(100, (areaH - 100) / count);
+  const yStart = (areaH - (count - 1) * ySpacing) / 2;
+
+  roundActive = true;
+  bubbleWords.forEach((word, i) => {
+    setTimeout(() => {
+      if (!roundActive) return;
+      const startX = areaW + 40 + i * 100;
+      const startY = yStart + i * ySpacing + (Math.random() * 25 - 12);
+      spawnBubble(word, word === currentTarget, startX, startY);
+    }, i * 350);
+  });
+}
+
+// ============================================================
+//  CLICK HANDLING
+// ============================================================
+function handleBubbleClick(bubble) {
+  if (bubble.clicking) return;
+  if (bubble.word === currentTarget) {
+    handleCorrectClick(bubble);
+  } else {
+    handleIncorrectClick(bubble);
+  }
+}
+
+function handleCorrectClick(bubble) {
+  bubble.clicking = true;
+  roundActive = false;
+
+  state.wordClicks[currentTarget] = (state.wordClicks[currentTarget] || 0) + 1;
+  state.totalCorrect++;
+
+  const rect = bubble.el.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  bubble.el.classList.add('correct-flash');
+  playPopSound();
+  speakWord(currentTarget);
+
+  createClickSparkles(cx, cy);
+
+  setTimeout(() => {
+    bubble.el.classList.add('dissolving');
+  }, 200);
+
+  roundBubbles.forEach(b => {
+    if (b !== bubble && b.el.parentNode) {
+      b.el.classList.add('fade-out');
+      setTimeout(() => { if (b.el.parentNode) b.el.remove(); }, 450);
+    }
+  });
+
+  setTimeout(() => {
+    if (bubble.el.parentNode) bubble.el.remove();
+    animateSeedToCounter(cx, cy);
+  }, 550);
+
+  saveState();
+  updateScoreDisplay();
+
+  setTimeout(() => {
+    plantNextPlant();
+  }, 1400);
+}
+
+function handleIncorrectClick(bubble) {
+  bubble.clicking = true;
+
+  bubble.el.style.background = 'linear-gradient(135deg, #EF5350, #B71C1C)';
+  bubble.el.classList.add('shake');
+  playWrongSound();
+
+  const charEl = document.getElementById('characterContainer');
+  charEl.classList.remove('character-fall');
+  void charEl.offsetWidth;
+  charEl.classList.add('character-fall');
+
+  setTimeout(() => {
+    bubble.el.classList.remove('shake');
+    bubble.el.style.background = bubble.bg;
+    bubble.clicking = false;
+  }, 550);
+
+  setTimeout(() => {
+    charEl.classList.remove('character-fall');
+  }, 1000);
+}
+
+// ============================================================
+//  SPARKLES & SEED ANIMATION
+// ============================================================
+function createClickSparkles(cx, cy) {
+  const colors = ['#FFD700','#FF4081','#FF6D00','#00E5FF','#76FF03','white','#E040FB'];
+  for (let i = 0; i < 12; i++) {
+    const sp = document.createElement('div');
+    sp.className = 'click-sparkle';
+    const angle = (i / 12) * Math.PI * 2 + Math.random() * 0.4;
+    const dist = 45 + Math.random() * 55;
+    const dx = Math.cos(angle) * dist;
+    const dy = Math.sin(angle) * dist;
+    const sz = 5 + Math.random() * 9;
+    const c = colors[Math.floor(Math.random() * colors.length)];
+    sp.style.cssText = `left:${cx-sz/2}px;top:${cy-sz/2}px;--size:${sz}px;--color:${c};--dx:${dx}px;--dy:${dy}px;`;
+    document.body.appendChild(sp);
+    setTimeout(() => sp.remove(), 700);
+  }
+}
+
+function animateSeedToCounter(startX, startY) {
+  const seed = document.createElement('div');
+  seed.className = 'flying-seed';
+  seed.textContent = '\u{1F331}';
+  seed.style.left = startX + 'px';
+  seed.style.top = startY + 'px';
+  document.body.appendChild(seed);
+
+  const counter = document.getElementById('plantProgress');
+  const cr = counter.getBoundingClientRect();
+  const dx = cr.left + cr.width / 2 - startX;
+  const dy = cr.top + cr.height / 2 - startY;
+
+  requestAnimationFrame(() => {
+    seed.style.transform = `translate(${dx}px, ${dy}px) scale(0.4)`;
+    seed.style.opacity = '0.7';
+  });
+
+  setTimeout(() => {
+    seed.remove();
+    playPlantSound();
+    updatePlantDisplay();
+
+    counter.classList.remove('pulse');
+    void counter.offsetWidth;
+    counter.classList.add('pulse');
+  }, 750);
+}
+
+// ============================================================
+//  PLANT THE NEXT PLANT
+// ============================================================
+function plantNextPlant() {
+  const nextSlotIdx = state.gardenPlants.length;
+  if (nextSlotIdx >= TOTAL_PLANTS) return;
+
+  state.gardenPlants.push(nextSlotIdx);
+  saveState();
+
+  const plantTypeIdx = state.plantOrder[nextSlotIdx];
+  const plant = PLANT_TYPES[plantTypeIdx];
+  if (!plant) { console.error('No plant type for slot', nextSlotIdx, 'plantTypeIdx', plantTypeIdx); return; }
+
+  const slot = document.getElementById('slot-' + nextSlotIdx);
+  if (slot) {
+    slot.innerHTML = '';
+
+    const div = document.createElement('div');
+    div.className = 'plant-svg';
+    div.style.width = '90%';
+    div.style.maxHeight = '100%';
+    div.innerHTML = plant.draw();
+    slot.appendChild(div);
+
+    const nameEl = document.createElement('div');
+    nameEl.className = 'plant-name';
+    nameEl.textContent = plant.name;
+    slot.appendChild(nameEl);
+    setTimeout(() => { if (nameEl.parentNode) nameEl.remove(); }, 2500);
+  }
+
+  // Watering animation
+  const charEl = document.getElementById('characterContainer');
+  charEl.classList.remove('watering');
+  void charEl.offsetWidth;
+  charEl.classList.add('watering');
+  createWaterDrops();
+
+  setTimeout(() => {
+    charEl.classList.remove('watering');
+  }, 1500);
+
+  updatePlantDisplay();
+
+  if (state.gardenPlants.length >= TOTAL_PLANTS) {
+    state.gardenComplete = true;
+    saveState();
+    setTimeout(() => showGardenComplete(), 2000);
+  } else {
+    setTimeout(() => {
+      if (!gamePaused) startNewRound();
+    }, 2200);
+  }
+}
+
+function createWaterDrops() {
+  const charEl = document.getElementById('characterContainer');
+  const rect = charEl.getBoundingClientRect();
+
+  for (let i = 0; i < 6; i++) {
+    setTimeout(() => {
+      const drop = document.createElement('div');
+      drop.className = 'water-drop';
+      drop.style.left = (rect.right - 20 + Math.random() * 30) + 'px';
+      drop.style.top = (rect.top + rect.height * 0.45 + Math.random() * 10) + 'px';
+      drop.style.animationDelay = (Math.random() * 0.3) + 's';
+      document.body.appendChild(drop);
+      setTimeout(() => drop.remove(), 1000);
+    }, i * 120);
+  }
+}
+
+// ============================================================
+//  GARDEN COMPLETE CELEBRATION
+// ============================================================
+let celebTimers = [];
+let celebInterval = null;
+
+function showGardenComplete() {
+  gamePaused = true;
+  roundActive = false;
+  clearRoundBubbles();
+  cleanupCelebration();
+
+  const overlay = document.getElementById('celebrationOverlay');
+  overlay.classList.add('show');
+
+  const layer = document.getElementById('celebrationLayer');
+  const scoreBurst = document.getElementById('celebScoreBurst');
+  const celebEmoji = document.getElementById('celebEmoji');
+  const celebMsg = document.getElementById('celebMessage');
+
+  layer.style.opacity = '1';
+  layer.classList.remove('fade-out');
+  scoreBurst.className = '';
+  celebEmoji.className = '';
+  celebMsg.className = '';
+  scoreBurst.textContent = '';
+  celebEmoji.textContent = '';
+  celebMsg.textContent = '';
+
+  spawnConfetti(30);
+  playLongFanfare();
+
+  celebInterval = setInterval(() => spawnConfetti(15), 1500);
+
+  celebTimers.push(setTimeout(() => {
+    scoreBurst.textContent = '\u{1F338} Garden Complete! \u{1F338}';
+    scoreBurst.classList.add('active');
+  }, 1000));
+
+  celebTimers.push(setTimeout(() => {
+    celebEmoji.textContent = '\u{1F33B}';
+    celebEmoji.classList.add('active');
+  }, 3000));
+
+  celebTimers.push(setTimeout(() => {
+    celebMsg.textContent = 'Your Garden is Beautiful!';
+    celebMsg.classList.add('active');
+  }, 5000));
+
+  celebTimers.push(setTimeout(() => createStarburst(), 6500));
+  celebTimers.push(setTimeout(() => createStarburst(), 7500));
+
+  celebTimers.push(setTimeout(() => {
+    layer.classList.add('fade-out');
+  }, 9000));
+
+  celebTimers.push(setTimeout(() => {
+    const card = document.getElementById('gardenCompleteCard');
+    card.style.display = '';
+    card.style.animation = 'none';
+    void card.offsetWidth;
+    card.style.animation = 'cardEnter 0.5s ease-out';
+  }, 10000));
+}
+
+function cleanupCelebration() {
+  celebTimers.forEach(t => clearTimeout(t));
+  celebTimers = [];
+  if (celebInterval) { clearInterval(celebInterval); celebInterval = null; }
+
+  const container = document.getElementById('celebConfettiContainer');
+  if (container) container.innerHTML = '';
+  const layer = document.getElementById('celebrationLayer');
+  if (layer) {
+    layer.querySelectorAll('.celeb-sparkle').forEach(el => el.remove());
+    layer.style.opacity = '1';
+    layer.classList.remove('fade-out');
+  }
+
+  const scoreBurst = document.getElementById('celebScoreBurst');
+  const celebEmoji = document.getElementById('celebEmoji');
+  const celebMsg = document.getElementById('celebMessage');
+  if (scoreBurst) { scoreBurst.className = ''; scoreBurst.textContent = ''; }
+  if (celebEmoji) { celebEmoji.className = ''; celebEmoji.textContent = ''; }
+  if (celebMsg) { celebMsg.className = ''; celebMsg.textContent = ''; }
+}
+
+function spawnConfetti(count) {
+  const container = document.getElementById('celebConfettiContainer');
+  const colors = ['#FF4081','#FFD700','#00E5FF','#76FF03','#FF6D00','#E040FB','#FF1744','#00BFA5','#FFEA00','#D500F9'];
+  for (let i = 0; i < count; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    const isCircle = Math.random() > 0.5;
+    const size = 6 + Math.random() * 10;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    const drift = (Math.random() - 0.5) * 80;
+    const dur = 2.5 + Math.random() * 2.5;
+    const delay = Math.random() * 0.8;
+    piece.style.cssText = `
+      left: ${Math.random() * 100}%;
+      width: ${isCircle ? size : size * 0.4}px;
+      height: ${size}px;
+      background: ${color};
+      border-radius: ${isCircle ? '50%' : '2px'};
+      --drift: ${drift}px;
+      --fall-dur: ${dur}s;
+      animation-delay: ${delay}s;
+    `;
+    container.appendChild(piece);
+    setTimeout(() => { if (piece.parentNode) piece.remove(); }, (dur + delay) * 1000 + 200);
+  }
+}
+
+function createStarburst() {
+  const layer = document.getElementById('celebrationLayer');
+  const cx = window.innerWidth / 2;
+  const cy = window.innerHeight * 0.4;
+  const colors = ['#FFD700','#FF4081','#00E5FF','#76FF03','#FF6D00','#E040FB','white','#FFEA00'];
+  for (let i = 0; i < 18; i++) {
+    const spark = document.createElement('div');
+    spark.className = 'celeb-sparkle';
+    const angle = (i / 18) * Math.PI * 2;
+    const dist = 80 + Math.random() * 120;
+    const sx = Math.cos(angle) * dist;
+    const sy = Math.sin(angle) * dist;
+    const size = 6 + Math.random() * 10;
+    const color = colors[Math.floor(Math.random() * colors.length)];
+    spark.style.cssText = `
+      left: ${cx - size/2}px; top: ${cy - size/2}px;
+      width: ${size}px; height: ${size}px;
+      background: ${color};
+      --sx: ${sx}px; --sy: ${sy}px;
+    `;
+    layer.appendChild(spark);
+    setTimeout(() => { if (spark.parentNode) spark.remove(); }, 1300);
+  }
+}
+
+function startNewGarden() {
+  cleanupCelebration();
+  document.getElementById('celebrationOverlay').classList.remove('show');
+  document.getElementById('gardenCompleteCard').style.display = 'none';
+
+  state.gardensCompleted++;
+  state.gardenPlants = [];
+  state.plantOrder = shuffle(Array.from({length: TOTAL_PLANTS}, (_, i) => i));
+  state.gridOffsets = Array.from({length: TOTAL_PLANTS}, () => ({
+    dx: Math.random() * 6 - 3,
+    dy: Math.random() * 4 - 2,
+    rot: Math.random() * 6 - 3
+  }));
+  state.gardenComplete = false;
+  saveState();
+
+  renderGarden();
+  updatePlantDisplay();
+  updateGardenCount();
+
+  gamePaused = false;
+  setTimeout(() => startNewRound(), 400);
+}
+
+// ============================================================
+//  DISPLAY UPDATES
+// ============================================================
+function updatePlantDisplay() {
+  document.getElementById('plantCount').textContent = state.gardenPlants.length;
+}
+
+function updateScoreDisplay() {
+  document.getElementById('scoreCount').textContent = state.totalCorrect;
+}
+
+function updateGardenCount() {
+  document.getElementById('gardensCompleted').textContent = state.gardensCompleted;
+}
+
+// ============================================================
+//  BACKGROUND: CLOUDS & BUTTERFLIES
+// ============================================================
+function createClouds() {
+  const sky = document.getElementById('skyZone');
+  for (let i = 0; i < 5; i++) {
+    const cloud = document.createElement('div');
+    cloud.className = 'bg-cloud';
+    cloud.style.top = (4 + Math.random() * 35) + '%';
+    cloud.style.width = (80 + Math.random() * 130) + 'px';
+    cloud.style.height = (30 + Math.random() * 40) + 'px';
+    cloud.style.animationDuration = (25 + Math.random() * 35) + 's';
+    cloud.style.animationDelay = (-Math.random() * 40) + 's';
+    cloud.style.opacity = 0.3 + Math.random() * 0.3;
+    sky.appendChild(cloud);
+  }
+}
+
+function createButterflies() {
+  const sky = document.getElementById('skyZone');
+  const colors = [['#FF4081','#F48FB1'], ['#FFD54F','#FFEE58'], ['#64B5F6','#90CAF9']];
+  for (let i = 0; i < 3; i++) {
+    const bf = document.createElement('div');
+    bf.className = 'butterfly';
+    bf.style.top = (15 + Math.random() * 50) + '%';
+    const dur = 30 + Math.random() * 25;
+    bf.style.animationDuration = dur + 's';
+    bf.style.animationDelay = (-Math.random() * dur) + 's';
+    const c = colors[i % colors.length];
+    bf.innerHTML = `<svg width="28" height="20" viewBox="0 0 28 20" xmlns="http://www.w3.org/2000/svg">
+      <ellipse cx="8" cy="7" rx="7" ry="6" fill="${c[0]}" opacity="0.8"/>
+      <ellipse cx="20" cy="7" rx="7" ry="6" fill="${c[0]}" opacity="0.8"/>
+      <ellipse cx="10" cy="14" rx="5" ry="4" fill="${c[1]}" opacity="0.7"/>
+      <ellipse cx="18" cy="14" rx="5" ry="4" fill="${c[1]}" opacity="0.7"/>
+      <rect x="13" y="3" width="2" height="14" rx="1" fill="#5D4037"/>
+      <line x1="13" y1="3" x2="8" y2="0" stroke="#5D4037" stroke-width="0.8"/>
+      <line x1="15" y1="3" x2="20" y2="0" stroke="#5D4037" stroke-width="0.8"/>
+      <circle cx="8" cy="0" r="1" fill="#5D4037"/>
+      <circle cx="20" cy="0" r="1" fill="#5D4037"/>
+    </svg>`;
+    sky.appendChild(bf);
+  }
+}
+
+// ============================================================
+//  GAME LOOP
+// ============================================================
+function gameFrame() {
+  if (!gamePaused) updateBubbles();
+  frameId = requestAnimationFrame(gameFrame);
+}
+
+// ============================================================
+//  INIT
+// ============================================================
+renderCharacter();
+renderGarden();
+renderFence();
+updatePlantDisplay();
+updateScoreDisplay();
+updateGardenCount();
+createClouds();
+createButterflies();
+
+document.getElementById('hearAgainBtn').onclick = () => {
+  if (currentTarget) speakWord(currentTarget);
+};
+
+document.getElementById('newGardenBtn').onclick = startNewGarden;
+
+document.getElementById('resetBtn').onclick = () => {
+  if (confirm('Reset all progress? This will start the game over.')) {
+    state = defaultState();
+    saveState();
+    renderGarden();
+    updatePlantDisplay();
+    updateScoreDisplay();
+    updateGardenCount();
+    clearRoundBubbles();
+    roundActive = false;
+    currentTarget = null;
+    gamePaused = false;
+    setTimeout(() => startNewRound(), 300);
+  }
+};
+
+if (state.gardenComplete) {
+  document.getElementById('celebrationOverlay').classList.add('show');
+  document.getElementById('gardenCompleteCard').style.display = '';
+  gamePaused = true;
+} else {
+  startNewRound();
+}
+
+frameId = requestAnimationFrame(gameFrame);
+</script>
+</body>
+</html>
